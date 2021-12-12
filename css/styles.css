@@ -1,0 +1,16 @@
+#bbconv-wrapper h1 {
+  font-weight: 600;
+}
+#bbconv-validation-only {
+  display: flex;
+  align-items: center;
+  margin-top: 35px;
+  margin-bottom: 35px;
+}
+#bbconv-validation-only input {
+  margin-left: 5px;
+}
+#bbconv-validation-only label {
+  font-weight: 500;
+  margin-right: 25px;
+}
