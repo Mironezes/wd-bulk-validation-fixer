@@ -1,14 +1,14 @@
 (function( $ ){
 	
 	// declaring variables at initialization
-	var $scanBtn = $('#bbconv-scan-btn'),
-		$convertAllBtn = $('#bbconv-convert-all-btn'),
-		$output = $('#bbconv-output'),
-		$singleConvertLinks = $('.bbconv-single-convert'),
+	var $scanBtn = $('#wdbvf-scan-btn'),
+		$convertAllBtn = $('#wdbvf-convert-all-btn'),
+		$output = $('#wdbvf-output'),
+		$singleConvertLinks = $('.wdbvf-single-convert'),
 		$doactionTopBtn = $('#doaction'),
 		$doactionBottomBtn = $('#doaction2'),
-		$validationOnlyCheckbox = $('#bbconv-validation-only input');
-		$resetValidationBtn = $('#bbconv-validation-only button');
+		$validationOnlyCheckbox = $('#wdbvf-validation-only input');
+		$resetValidationBtn = $('#wdbvf-validation-only button');
 		convertQueue = [],
 		doingAjax = false;
 		
@@ -48,8 +48,8 @@
 		localAutosaveInterval: 15
 	};
 
-	$('<div />').attr('id', 'bbconv-editor').attr('style', 'display: none').appendTo('body');
-	wp.editPost.initializeEditor('bbconv-editor', 'post', 1, settings);
+	$('<div />').attr('id', 'wdbvf-editor').attr('style', 'display: none').appendTo('body');
+	wp.editPost.initializeEditor('wdbvf-editor', 'post', 1, settings);
 	
 	$scanBtn.click(function(e){
 
@@ -74,16 +74,16 @@
 		doingAjax = true;
 		var nonce = $scanBtn.data('nonce');
 
-		$output.html( bbconvObj.scanningMessage );
+		$output.html( wdbvfObj.scanningMessage );
 		$.ajax({
 			method: "POST",
-			url: bbconvObj.ajaxUrl,
-			data: { action : "bbconv_scan_posts", mode : $mode, offset : offset, total : total, _wpnonce : nonce }
+			url: wdbvfObj.ajaxUrl,
+			data: { action : "wdbvf_scan_posts", mode : $mode, offset : offset, total : total, _wpnonce : nonce }
 		})
 		.done(function( data ){
 			doingAjax = false;
 			if ( typeof data !== "object" ) {
-				$output.html( bbconvObj.serverErrorMessage );
+				$output.html( wdbvfObj.serverErrorMessage );
 				return;
 			}
 			if ( data.error ) {
@@ -93,7 +93,7 @@
 			if ( data.offset >= data.total ) {
 				$scanBtn.prop("disabled", false);
 				$output.html( data.message );
-				document.location.href = document.location.href + "&bbconv_scan_finished=1";
+				document.location.href = document.location.href + "&wdbvf_scan_finished=1";
 				return;
 			}
 			if(sessionStorage.getItem('wdbc_validation_only')){
@@ -104,14 +104,14 @@
 		})
 		.fail(function(){
 			doingAjax = false;
-			$output.html( bbconvObj.serverErrorMessage );
+			$output.html( wdbvfObj.serverErrorMessage );
 		});
 	}
 	
 	// "Bulk Convert All" button handler
 	$convertAllBtn.click(function(e){
 		e.preventDefault();
-		if( ! confirm( bbconvObj.confirmConvertAllMessage ) ) return;
+		if( ! confirm( wdbvfObj.confirmConvertAllMessage ) ) return;
 		$convertAllBtn.prop("disabled", true);
 		bulkConvertPosts();
 	});
@@ -131,11 +131,11 @@
 		let data_obj = {
 			data: 'true',
 			action: 'reset_posts_validation_status',
-			noncw: bbconvObj.resetPostsValidationNonce
+			noncw: wdbvfObj.resetPostsValidationNonce
 		};
 		if(confirm) {
 			jQuery.ajax({
-				url: bbconvObj.ajaxUrl,
+				url: wdbvfObj.ajaxUrl,
 				type: 'post',
 				data: data_obj
 			});
@@ -152,16 +152,16 @@
 
 		doingAjax = true;
 		var nonce = $convertAllBtn.data('nonce');
-		$output.html( bbconvObj.bulkConvertingMessage );
+		$output.html( wdbvfObj.bulkConvertingMessage );
 		$.ajax({
 			method: "GET",
-			url: bbconvObj.ajaxUrl,
-			data: { action : "bbconv_bulk_convert", offset : offset, total : total, _wpnonce : nonce }
+			url: wdbvfObj.ajaxUrl,
+			data: { action : "wdbvf_bulk_convert", offset : offset, total : total, _wpnonce : nonce }
 		})
 		.done(function( data ){
 			doingAjax = false;
 			if ( typeof data !== "object" ) {
-				$output.html( bbconvObj.serverErrorMessage );
+				$output.html( wdbvfObj.serverErrorMessage );
 				return;
 			}
 			if ( data.error ) {
@@ -192,7 +192,7 @@
 		})
 		.fail(function(){
 			doingAjax = false;
-			$output.html( bbconvObj.serverErrorMessage );
+			$output.html( wdbvfObj.serverErrorMessage );
 		});
 	}
 	
@@ -202,7 +202,7 @@
 		doingAjax = true;
 		var nonce = $convertAllBtn.data('nonce');
 		var jsonData = {
-			action : "bbconv_bulk_convert",
+			action : "wdbvf_bulk_convert",
 			offset : offset,
 			total : total,
 			postsData : convertedData,
@@ -210,13 +210,13 @@
 		};
 		$.ajax({
 			method: "POST",
-			url: bbconvObj.ajaxUrl,
+			url: wdbvfObj.ajaxUrl,
 			data: jsonData
 		})
 		.done(function( data ){
 			doingAjax = false;
 			if ( typeof data !== "object" ) {
-				$output.html( bbconvObj.serverErrorMessage );
+				$output.html( wdbvfObj.serverErrorMessage );
 				return;
 			}
 			if ( data.error ) {
@@ -225,7 +225,7 @@
 			}
 			if ( data.offset >= data.total ) {
 				$convertAllBtn.prop("disabled", false);
-				$output.html( bbconvObj.bulkConvertingSuccessMessage );
+				$output.html( wdbvfObj.bulkConvertingSuccessMessage );
 				return;
 			}
 			bulkConvertPosts( offset, total );
@@ -235,7 +235,7 @@
 		})
 		.fail(function(){
 			doingAjax = false;
-			$output.html( bbconvObj.serverErrorMessage );
+			$output.html( wdbvfObj.serverErrorMessage );
 		});
 	}
 	
@@ -253,11 +253,11 @@
 		if ( doingAjax ) return;
 		doingAjax = true;
 		var postID = convertQueue.shift();
-		var $linkObject = $('#bbconv-single-convert-' + postID);
-		$linkObject.hide().after( bbconvObj.convertingSingleMessage );
+		var $linkObject = $('#wdbvf-single-convert-' + postID);
+		$linkObject.hide().after( wdbvfObj.convertingSingleMessage );
 		$.ajax({
 			method: "GET",
-			url: bbconvObj.ajaxUrl,
+			url: wdbvfObj.ajaxUrl,
 			data: $linkObject.data('json')
 		})
 		.done(function( data ) {
@@ -265,11 +265,11 @@
 
 			doingAjax = false;
 			if ( typeof data !== "object" ) {
-				$linkObject.parent().html( bbconvObj.failedMessage );
+				$linkObject.parent().html( wdbvfObj.failedMessage );
 				return;
 			}
 			if ( data.error ) {
-				$linkObject.parent().html( bbconvObj.failedMessage );
+				$linkObject.parent().html( wdbvfObj.failedMessage );
 				return;
 			}
 			if(is_validation_only) {
@@ -284,7 +284,7 @@
 		})
 		.fail(function(){
 			doingAjax = false;
-			$linkObject.parent().html( bbconvObj.failedMessage );
+			$linkObject.parent().html( wdbvfObj.failedMessage );
 		});
 	}
 	
@@ -304,30 +304,30 @@
 		jsonData.content = content;
 		$.ajax({
 			method: "POST",
-			url: bbconvObj.ajaxUrl,
+			url: wdbvfObj.ajaxUrl,
 			data: jsonData
 		})
 		.done(function( data ){
 			doingAjax = false;
-			$("#bbconv-convert-checkbox-"+jsonData.post).prop("checked", false);
-			$("#bbconv-convert-checkbox-"+jsonData.post).prop("disabled", true);
+			$("#wdbvf-convert-checkbox-"+jsonData.post).prop("checked", false);
+			$("#wdbvf-convert-checkbox-"+jsonData.post).prop("disabled", true);
 			if ( typeof data !== "object" ) {
-				$linkObject.parent().html( bbconvObj.failedMessage );
+				$linkObject.parent().html( wdbvfObj.failedMessage );
 				return;
 			}
 			if ( data.error ) {
-				$linkObject.parent().html( bbconvObj.failedMessage );
+				$linkObject.parent().html( wdbvfObj.failedMessage );
 				return;
 			}
-			$linkObject.parent().html( bbconvObj.convertedSingleMessage );
+			$linkObject.parent().html( wdbvfObj.convertedSingleMessage );
 			convertPosts();
 			return;
 		})
 		.fail(function(){
 			doingAjax = false;
-			$("#bbconv-convert-checkbox-"+jsonData.post).prop("checked", false);
-			$("#bbconv-convert-checkbox-"+jsonData.post).prop("disabled", true);
-			$linkObject.parent().html( bbconvObj.failedMessage );
+			$("#wdbvf-convert-checkbox-"+jsonData.post).prop("checked", false);
+			$("#wdbvf-convert-checkbox-"+jsonData.post).prop("disabled", true);
+			$linkObject.parent().html( wdbvfObj.failedMessage );
 		});
 	}
 	

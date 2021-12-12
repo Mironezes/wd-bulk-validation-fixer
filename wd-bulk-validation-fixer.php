@@ -6,7 +6,7 @@
  * GitHub Plugin URI: https://github.com/Mironezes/wd-bulk-validation-fixer
  * Primary Branch: realise
  * Description: Fixes all known validaiton issues on WD satellites posts.
- * Version: 0.1
+ * Version: 0.2
  * Author: Alexey Suprun
  * Author URI: https://github.com/mironezes
  * License: GPL-2.0+
@@ -21,40 +21,40 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 require_once('helpers.php');
 
-define( 'WDBVF_VERSION', '1.8.4' );   
+define( 'WDBVF_VERSION', '0.2' );   
 define( 'WDBVF_DOMAIN', 'wdbvf' );                   // Text Domain
 define( 'WDBVF_SLUG', 'wd-bulk-validation-fixer' );      // Plugin slug
 define( 'WDBVF_FOLDER', plugin_dir_path( __FILE__ ) );    // Plugin folder
 define( 'WDBVF_URL', plugin_dir_url( __FILE__ ) );        // Plugin URL
 
 // post types and statuses plugin work with
-define( 'BBCONV_TYPES', serialize( array( 'post', 'page' ) ) );
-define( 'BBCONV_STATUSES', serialize( array( 'publish' ) ) );
+define( 'WDBVF_TYPES', serialize( array( 'post', 'page' ) ) );
+define( 'WDBVF_STATUSES', serialize( array( 'publish' ) ) );
 
 // meta key and value for posts inexing
-define( 'BBCONV_META_KEY', 'wdbvf_not_converted' );
-define( 'BBCONV_META_VALUE', '1' );
+define( 'WDBVF_META_KEY', 'wdbvf_not_converted' );
+define( 'WDBVF_META_VALUE', '1' );
 
 /**
  * Add plugin actions if Block Editor is active.
  */
-add_action( 'plugins_loaded', 'bbconv_init_the_plugin' );
-function bbconv_init_the_plugin() {
-	if ( ! bbconv_is_gutenberg_active() ) {
+add_action( 'plugins_loaded', 'wdbvf_init_the_plugin' );
+function wdbvf_init_the_plugin() {
+	if ( ! wdbvf_is_gutenberg_active() ) {
 		return;
 	}
 	// dispatching POST to GET parameters
-	add_action( 'init', 'bbconv_dispatch_url' );
+	add_action( 'init', 'wdbvf_dispatch_url' );
 	// adding subitem to the Tools menu item
-	add_action( 'admin_menu', 'bbconv_display_menu_item' );
+	add_action( 'admin_menu', 'wdbvf_display_menu_item' );
 	// scan posts via ajax
-	add_action( 'wp_ajax_bbconv_scan_posts', 'bbconv_scan_posts_ajax' );
+	add_action( 'wp_ajax_wdbvf_scan_posts', 'wdbvf_scan_posts_ajax' );
 	// bulk all posts convert
-	add_action( 'wp_ajax_bbconv_bulk_convert', 'bbconv_bulk_convert_ajax' );
+	add_action( 'wp_ajax_wdbvf_bulk_convert', 'wdbvf_bulk_convert_ajax' );
 	// single post convert via ajax
-	add_action( 'wp_ajax_bbconv_single_convert', 'bbconv_single_convert_ajax' );
+	add_action( 'wp_ajax_wdbvf_single_convert', 'wdbvf_single_convert_ajax' );
 	// automatically index posts on creation and updating
-	add_action( 'post_updated', 'bbconv_index_after_save', 10, 2 );
+	add_action( 'post_updated', 'wdbvf_index_after_save', 10, 2 );
 	// resets indexes & validation status
 	add_action( 'wp_ajax_reset_posts_validation_status', 'reset_posts_validation_status' );
 }
@@ -62,9 +62,9 @@ function bbconv_init_the_plugin() {
 /**
  * Adding content filters on save_post action
  */
-function bbconv_on_save_post_validation_fix($post_id) {
-  remove_action('save_post', 'bbconv_on_save_post_validation_fix', 25 );
-	remove_action('publish_post', 'bbconv_on_save_post_validation_fix', 25);
+function wdbvf_on_save_post_validation_fix($post_id) {
+  remove_action('save_post', 'wdbvf_on_save_post_validation_fix', 25 );
+	remove_action('publish_post', 'wdbvf_on_save_post_validation_fix', 25);
 
   $filtered_content_stage1 = bbc_regex_post_content_filters(get_post_field('post_content', $post_id));
   $filtered_content_stage2 = bbc_set_image_dimension($filtered_content_stage1);
@@ -90,13 +90,13 @@ function bbconv_on_save_post_validation_fix($post_id) {
 		wp_update_post($args);
 	}
 	
-  add_action('save_post', 'bbconv_on_save_post_validation_fix', 25 );
-	add_action('publish_post', 'bbconv_on_save_post_validation_fix', 25);
+  add_action('save_post', 'wdbvf_on_save_post_validation_fix', 25 );
+	add_action('publish_post', 'wdbvf_on_save_post_validation_fix', 25);
 
 }
 
-add_action('save_post', 'bbconv_on_save_post_validation_fix', 25);
-add_action('publish_post', 'bbconv_on_save_post_validation_fix', 25);
+add_action('save_post', 'wdbvf_on_save_post_validation_fix', 25);
+add_action('publish_post', 'wdbvf_on_save_post_validation_fix', 25);
 
 
 /**
@@ -105,7 +105,7 @@ add_action('publish_post', 'bbconv_on_save_post_validation_fix', 25);
  *
  * @return bool
  */
-function bbconv_is_gutenberg_active() {
+function wdbvf_is_gutenberg_active() {
 	// Gutenberg plugin is installed and activated.
 	// $gutenberg = ! ( false === has_filter( 'replace_editor', 'gutenberg_init' ) );
 
@@ -121,12 +121,12 @@ function bbconv_is_gutenberg_active() {
 
 	// Remove Gutenberg plugin scripts reassigning.
 	if ( $gutenberg_plugin ) {
-		add_action( 'wp_default_scripts', 'bbconv_remove_gutenberg_overrides', 5 );
+		add_action( 'wp_default_scripts', 'wdbvf_remove_gutenberg_overrides', 5 );
 	}
 
 	return true;
 
-	// if ( bbconv_is_classic_editor_plugin_active() ) {
+	// if ( wdbvf_is_classic_editor_plugin_active() ) {
 	// $editor_option       = get_option( 'classic-editor-replace' );
 	// $block_editor_active = array( 'no-replace', 'block' );
 	//
@@ -140,7 +140,7 @@ function bbconv_is_gutenberg_active() {
  *
  * @return bool
  */
-function bbconv_is_classic_editor_plugin_active() {
+function wdbvf_is_classic_editor_plugin_active() {
 	if ( ! function_exists( 'is_plugin_active' ) ) {
 		include_once ABSPATH . 'wp-admin/includes/plugin.php';
 	}
@@ -155,7 +155,7 @@ function bbconv_is_classic_editor_plugin_active() {
 /**
  * Remove Gutenberg plugin scripts reassigning.
  */
-function bbconv_remove_gutenberg_overrides() {
+function wdbvf_remove_gutenberg_overrides() {
 	$pagematch = strpos( $_SERVER['REQUEST_URI'], '/wp-admin/tools.php?page=' . WDBVF_SLUG );
 	if ( $pagematch !== false ) {
 		remove_action( 'wp_default_scripts', 'gutenberg_register_vendor_scripts' );
@@ -166,25 +166,25 @@ function bbconv_remove_gutenberg_overrides() {
 /**
  * Adding subitem to the Tools menu item.
  */
-function bbconv_display_menu_item() {
-	$plugin_page = add_management_page( __( ' WD Bulk Block Convertor & Validation Fixer', WDBVF_DOMAIN ), __( 'WD Block Conversion', WDBVF_DOMAIN ), 'manage_options', WDBVF_SLUG, 'bbconv_show_admin_page' );
+function wdbvf_display_menu_item() {
+	$plugin_page = add_management_page( __( ' WD Bulk Block Convertor & Validation Fixer', WDBVF_DOMAIN ), __( 'WD Block Conversion', WDBVF_DOMAIN ), 'manage_options', WDBVF_SLUG, 'wdbvf_show_admin_page' );
 
 	// Load the JS conditionally
-	add_action( 'load-' . $plugin_page, 'bbconv_load_admin_css_js' );
+	add_action( 'load-' . $plugin_page, 'wdbvf_load_admin_css_js' );
 }
 
 /**
  * This function is only called when our plugin's page loads!
  */
-function bbconv_load_admin_css_js() {
+function wdbvf_load_admin_css_js() {
 	// Unfortunately we can't just enqueue our scripts here - it's too early. So register against the proper action hook to do it
-	add_action( 'admin_enqueue_scripts', 'bbconv_enqueue_admin_css_js' );
+	add_action( 'admin_enqueue_scripts', 'wdbvf_enqueue_admin_css_js' );
 }
 
 /**
  * Enqueue admin styles and scripts.
  */
-function bbconv_enqueue_admin_css_js() {
+function wdbvf_enqueue_admin_css_js() {
 	wp_register_style( WDBVF_DOMAIN . '-style', WDBVF_URL . 'css/styles.css',  array(), WDBVF_VERSION);
 	wp_register_script( WDBVF_DOMAIN . '-script', WDBVF_URL . 'js/scripts.js', array( 'jquery', 'wp-blocks', 'wp-edit-post' ), WDBVF_VERSION, true );
 	$jsObj = array(
@@ -199,7 +199,7 @@ function bbconv_enqueue_admin_css_js() {
 		'failedMessage'                => __( 'Failed', WDBVF_DOMAIN ),
 		'resetPostsValidationNonce' => wp_create_nonce('reset-posts-validation-status-nonce'),
 	);
-	wp_localize_script( WDBVF_DOMAIN . '-script', 'bbconvObj', $jsObj );
+	wp_localize_script( WDBVF_DOMAIN . '-script', 'wdbvfObj', $jsObj );
 	wp_enqueue_script( WDBVF_DOMAIN . '-script' );
 	wp_enqueue_style( WDBVF_DOMAIN . '-style');
 }
@@ -207,42 +207,42 @@ function bbconv_enqueue_admin_css_js() {
 /**
  * Rendering admin page of the plugin.
  */
-function bbconv_show_admin_page() {
-	$indexed_arr   = bbconv_count_indexed();
-	$indexed_exist = bbconv_exist_indexed( $indexed_arr );
+function wdbvf_show_admin_page() {
+	$indexed_arr   = wdbvf_count_indexed();
+	$indexed_exist = wdbvf_exist_indexed( $indexed_arr );
 	?>
 <div id="wdbvf-wrapper" class="wrap">
 	<h1><?php echo get_admin_page_title(); ?></h1>
 	<?php
-	global $bbconv_success, $bbconv_error;
+	global $wdbvf_success, $wdbvf_error;
 	if ( isset( $_GET['result'] ) && $_GET['result'] == '1' ) {
-		if ( ! empty( $bbconv_error ) ) {
-			echo '<div class="error"><p>' . $bbconv_error . '</p></div>';
+		if ( ! empty( $wdbvf_error ) ) {
+			echo '<div class="error"><p>' . $wdbvf_error . '</p></div>';
 		}
-		if ( ! empty( $bbconv_success ) ) {
-			echo '<div class="updated"><p>' . $bbconv_success . '</p></div>';
+		if ( ! empty( $wdbvf_success ) ) {
+			echo '<div class="updated"><p>' . $wdbvf_success . '</p></div>';
 		}
 	}
 	?>
 	<p><?php _e( 'This process will scan your post types for any content that may be converted to blocks. Then, you can choose to convert posts to blocks individually, or bulk convert all content to blocks.', WDBVF_DOMAIN ); ?></p>
 	<p><span style="color:red;"><?php _e( 'Please note:', WDBVF_DOMAIN ); ?></span> <?php _e( 'Converting content to blocks is irreversible. We highly recommend creating a backup before conversion.', WDBVF_DOMAIN ); ?></p>
 	<div id="wdbvf-validation-only">
-		<label>Validation Fix only <input type="checkbox" name="bbconv_validation_only" value="1"></label>
+		<label>Validation Fix only <input type="checkbox" name="wdbvf_validation_only" value="1"></label>
 		<button type="button">Reset all post validation statuses</button>
 	</div>
 	<p>
-		<button id="wdbvf-scan-btn" class="button button-hero" data-nonce="<?php echo wp_create_nonce( 'bbconv_scan_content' ); ?>"><?php _e( 'Scan Content', WDBVF_DOMAIN ); ?></button>
+		<button id="wdbvf-scan-btn" class="button button-hero" data-nonce="<?php echo wp_create_nonce( 'wdbvf_scan_content' ); ?>"><?php _e( 'Scan Content', WDBVF_DOMAIN ); ?></button>
 	<!-- <?php if ( $indexed_exist ) : ?>
 		&nbsp;&nbsp;
-		<button id="wdbvf-convert-all-btn" class="button button-primary button-hero" data-nonce="<?php echo wp_create_nonce( 'bbconv_bulk_convert' ); ?>"><?php _e( 'Bulk Convert All', WDBVF_DOMAIN ); ?></button>
+		<button id="wdbvf-convert-all-btn" class="button button-primary button-hero" data-nonce="<?php echo wp_create_nonce( 'wdbvf_bulk_convert' ); ?>"><?php _e( 'Bulk Convert All', WDBVF_DOMAIN ); ?></button>
 	<?php endif; ?> -->
 	</p>
 	<div id="wdbvf-output">
 	<?php if ( $indexed_exist ) : ?>
-		<div id="wdbvf-results"><?php bbconv_render_results( $indexed_arr ); ?></div>
-		<div id="wdbvf-table"><?php bbconv_render_table(); ?></div>
+		<div id="wdbvf-results"><?php wdbvf_render_results( $indexed_arr ); ?></div>
+		<div id="wdbvf-table"><?php wdbvf_render_table(); ?></div>
 	<?php else : ?>
-		<?php if ( ! empty( $_GET['bbconv_scan_finished'] ) ) : ?>
+		<?php if ( ! empty( $_GET['wdbvf_scan_finished'] ) ) : ?>
 			<p><?php _e( 'No posts found.', WDBVF_DOMAIN ); ?></p>
 		<?php endif; ?>
 	<?php endif; ?>
@@ -260,8 +260,8 @@ function reset_posts_validation_status() {
 	var_dump($response);
 
 	if($response == true) {
-		// delete_metadata( 'post', 0, 'wdss_validation_fixed', false, true );
-		delete_metadata( 'post', 0, BBCONV_META_KEY, false, true );
+		delete_metadata( 'post', 0, 'wdss_validation_fixed', false, true );
+		delete_metadata( 'post', 0, WDBVF_META_KEY, false, true );
 	}
 
 }
@@ -270,14 +270,14 @@ function reset_posts_validation_status() {
 /**
  * Scan posts via ajax.
  */
-function bbconv_scan_posts_ajax() {
+function wdbvf_scan_posts_ajax() {
 	$offset         = intval( $_REQUEST['offset'] );
 	$total_expected = intval( $_REQUEST['total'] );
 	$mode = intval($_REQUEST['mode']);
 
 	$total_actual  = 0;
-	$post_types    = unserialize( BBCONV_TYPES );
-	$post_statuses = unserialize( BBCONV_STATUSES );
+	$post_types    = unserialize( WDBVF_TYPES );
+	$post_statuses = unserialize( WDBVF_STATUSES );
 	foreach ( $post_types as $type ) {
 		$type_total = wp_count_posts( $type );
 		foreach ( $post_statuses as $status ) {
@@ -294,7 +294,7 @@ function bbconv_scan_posts_ajax() {
 	);
 
 	$nonce = esc_attr( $_REQUEST['_wpnonce'] );
-	if ( ! wp_verify_nonce( $nonce, 'bbconv_scan_content' ) ) {
+	if ( ! wp_verify_nonce( $nonce, 'wdbvf_scan_content' ) ) {
 		$json['error']   = true;
 		$json['message'] = '<div class="error"><p>' . __( 'Forbidden!', WDBVF_DOMAIN ) . '</p></div>';
 		die( json_encode( $json ) );
@@ -315,8 +315,8 @@ function bbconv_scan_posts_ajax() {
 	$posts_array = get_posts( $args );
 
 	foreach ( $posts_array as $post ) {
-		if ( $mode === 1 || bbconv_find_classic( $post->post_content ) ) {
-			update_post_meta( $post->ID, BBCONV_META_KEY, BBCONV_META_VALUE );
+		if ( $mode === 1 || wdbvf_find_classic( $post->post_content ) ) {
+			update_post_meta( $post->ID, WDBVF_META_KEY, WDBVF_META_VALUE );
 		}
 		$offset++;
 	}
@@ -330,12 +330,12 @@ function bbconv_scan_posts_ajax() {
 /**
  * Bulk converting of all indexed posts via ajax.
  */
-function bbconv_bulk_convert_ajax() {
+function wdbvf_bulk_convert_ajax() {
 	header( 'Content-Type: application/json; charset=UTF-8' );
 
 	$json  = array();
 	$nonce = esc_attr( $_REQUEST['_wpnonce'] );
-	if ( ! wp_verify_nonce( $nonce, 'bbconv_bulk_convert' ) ) {
+	if ( ! wp_verify_nonce( $nonce, 'wdbvf_bulk_convert' ) ) {
 		$json['error']   = true;
 		$json['message'] = '<div class="error"><p>' . __( 'Forbidden!', WDBVF_DOMAIN ) . '</p></div>';
 		die( json_encode( $json ) );
@@ -345,10 +345,10 @@ function bbconv_bulk_convert_ajax() {
 		$offset         = intval( $_GET['offset'] );
 		$total_expected = intval( $_GET['total'] );
 
-		$post_types    = unserialize( BBCONV_TYPES );
-		$post_statuses = unserialize( BBCONV_STATUSES );
+		$post_types    = unserialize( WDBVF_TYPES );
+		$post_statuses = unserialize( WDBVF_STATUSES );
 
-		$total_actual = bbconv_get_count( $post_types );
+		$total_actual = wdbvf_get_count( $post_types );
 		if ( $total_expected == -1 ) {
 			$total_expected = $total_actual;
 		}
@@ -371,8 +371,8 @@ function bbconv_bulk_convert_ajax() {
 			'post_type'      => $post_types,
 			'post_status'    => $post_statuses,
 			'posts_per_page' => 10,
-			'meta_key'       => BBCONV_META_KEY,
-			'meta_value'     => BBCONV_META_VALUE,
+			'meta_key'       => WDBVF_META_KEY,
+			'meta_value'     => WDBVF_META_VALUE,
 		);
 		$posts_array = get_posts( $args );
 
@@ -431,7 +431,7 @@ function bbconv_bulk_convert_ajax() {
  *
  * @return bool
  */
-function bbconv_find_classic( $content ) {
+function wdbvf_find_classic( $content ) {
 	if ( ! empty( $content )
 		&& strpos( $content, '<!-- wp:' ) === false ) {
 		return true;
@@ -444,14 +444,14 @@ function bbconv_find_classic( $content ) {
  *
  * @return array
  */
-function bbconv_count_indexed() {
-	$post_types = unserialize( BBCONV_TYPES );
+function wdbvf_count_indexed() {
+	$post_types = unserialize( WDBVF_TYPES );
 
 	$indexed = array();
 	foreach ( $post_types as $type ) {
 		$post_type_obj     = get_post_type_object( $type );
 		$label             = $post_type_obj->labels->name;
-		$indexed[ $label ] = bbconv_get_count( $type );
+		$indexed[ $label ] = wdbvf_get_count( $type );
 	}
 
 	return $indexed;
@@ -464,7 +464,7 @@ function bbconv_count_indexed() {
  *
  * @return bool
  */
-function bbconv_exist_indexed( $indexed ) {
+function wdbvf_exist_indexed( $indexed ) {
 	foreach ( $indexed as $index ) {
 		if ( $index > 0 ) {
 			return true;
@@ -480,12 +480,12 @@ function bbconv_exist_indexed( $indexed ) {
  *
  * @return int
  */
-function bbconv_get_count( $type ) {
+function wdbvf_get_count( $type ) {
 	$args = array(
 		'posts_per_page' => -1,
 		'post_type'      => $type,
-		'meta_key'       => BBCONV_META_KEY,
-		'meta_value'     => BBCONV_META_VALUE,
+		'meta_key'       => WDBVF_META_KEY,
+		'meta_value'     => WDBVF_META_VALUE,
 	);
 
 	$posts_query = new WP_Query( $args );
@@ -495,7 +495,7 @@ function bbconv_get_count( $type ) {
 /**
  * Display results list.
  */
-function bbconv_render_results( $indexed ) {
+function wdbvf_render_results( $indexed ) {
 	$output  = '<h2>' . __( 'Scan results', WDBVF_DOMAIN ) . '</h2>';
 	$output .= '<p>' . __( 'The following post types are ready for conversion:', WDBVF_DOMAIN ) . '</p>';
 	$output .= '<ul style="list-style-type:disc;padding-left:15px;">';
@@ -509,7 +509,7 @@ function bbconv_render_results( $indexed ) {
 /**
  * Display table with indexed posts.
  */
-function bbconv_render_table() {
+function wdbvf_render_table() {
 	?>
 	<div class="meta-box-sortables ui-sortable">
 	<?php
@@ -534,7 +534,7 @@ function bbconv_render_table() {
  *
  * @return string
  */
-function bbconv_status_label( $status ) {
+function wdbvf_status_label( $status ) {
 	$status_labels = array(
 		'any'     => __( 'All', WDBVF_DOMAIN ),
 		'publish' => __( 'Published', WDBVF_DOMAIN ),
@@ -552,7 +552,7 @@ function bbconv_status_label( $status ) {
 /**
  * Single post converting via ajax.
  */
-function bbconv_single_convert_ajax() {
+function wdbvf_single_convert_ajax() {
 	require_once('helpers.php');
 
 	header( 'Content-Type: application/json; charset=UTF-8' );
@@ -563,7 +563,7 @@ function bbconv_single_convert_ajax() {
 	);
 
 	$nonce = esc_attr( $_REQUEST['_wpnonce'] );
-	if ( ! wp_verify_nonce( $nonce, 'bbconv_convert_post_' . $_REQUEST['post'] ) ) {
+	if ( ! wp_verify_nonce( $nonce, 'wdbvf_convert_post_' . $_REQUEST['post'] ) ) {
 		$json['error']   = true;
 		$json['message'] = '<div class="error"><p>' . __( 'Forbidden!', WDBVF_DOMAIN ) . '</p></div>';
 		die( json_encode( $json ) );
@@ -611,32 +611,32 @@ function bbconv_single_convert_ajax() {
 /**
  * Cleaning up on plugin deactivation.
  */
-function bbconv_deactivate() {
+function wdbvf_deactivate() {
 	global $wpdb;
-	$query = "DELETE FROM {$wpdb->postmeta} WHERE meta_key='" . BBCONV_META_KEY . "'";
+	$query = "DELETE FROM {$wpdb->postmeta} WHERE meta_key='" . WDBVF_META_KEY . "'";
 	$wpdb->query( $query );
 }
-register_deactivation_hook( __FILE__, 'bbconv_deactivate' );
+register_deactivation_hook( __FILE__, 'wdbvf_deactivate' );
 
 /**
  * Automatically index posts on creation or updating.
  */
-function bbconv_index_after_save( $post_ID, $post_after ) {
-	if ( bbconv_find_classic( $post_after->post_content ) ) {
-		update_post_meta( $post_ID, BBCONV_META_KEY, BBCONV_META_VALUE );
+function wdbvf_index_after_save( $post_ID, $post_after ) {
+	if ( wdbvf_find_classic( $post_after->post_content ) ) {
+		update_post_meta( $post_ID, WDBVF_META_KEY, WDBVF_META_VALUE );
 	} else {
-		delete_post_meta( $post_ID, BBCONV_META_KEY );
+		delete_post_meta( $post_ID, WDBVF_META_KEY );
 	}
 }
 
 /**
  * Dispatching POST to GET parameters.
  */
-function bbconv_dispatch_url() {
-	$params = array( 'bbconv_post_type', 's', 'paged' );
+function wdbvf_dispatch_url() {
+	$params = array( 'wdbvf_post_type', 's', 'paged' );
 
 	foreach ( $params as $param ) {
-		bbconv_post_to_get( $param );
+		wdbvf_post_to_get( $param );
 	}
 }
 
@@ -645,7 +645,7 @@ function bbconv_dispatch_url() {
  *
  * @param string $parameter
  */
-function bbconv_post_to_get( $parameter ) {
+function wdbvf_post_to_get( $parameter ) {
 	if ( isset( $_POST[ $parameter ] ) ) {
 		if ( ! empty( $_POST[ $parameter ] ) ) {
 			if ( empty( $_GET[ $parameter ] ) ||
@@ -691,22 +691,22 @@ class Bbconv_List_Table extends WP_List_Table {
 	 * @return array
 	 */
 	public static function set_args_for_query() {
-		$post_types    = unserialize( BBCONV_TYPES );
-		$post_statuses = unserialize( BBCONV_STATUSES );
+		$post_types    = unserialize( WDBVF_TYPES );
+		$post_statuses = unserialize( WDBVF_STATUSES );
 
 		$args = array(
 			'post_type'   => $post_types,
 			'post_status' => $post_statuses,
-			'meta_key'    => BBCONV_META_KEY,
-			'meta_value'  => BBCONV_META_VALUE,
+			'meta_key'    => WDBVF_META_KEY,
+			'meta_value'  => WDBVF_META_VALUE,
 		);
 
-		if ( ! empty( $_REQUEST['bbconv_post_type'] ) ) {
-			$args['post_type'] = $_REQUEST['bbconv_post_type'];
+		if ( ! empty( $_REQUEST['wdbvf_post_type'] ) ) {
+			$args['post_type'] = $_REQUEST['wdbvf_post_type'];
 		}
 
-		if ( ! empty( $_REQUEST['bbconv_post_status'] ) ) {
-			$args['post_status'] = $_REQUEST['bbconv_post_status'];
+		if ( ! empty( $_REQUEST['wdbvf_post_status'] ) ) {
+			$args['post_status'] = $_REQUEST['wdbvf_post_status'];
 		}
 
 		if ( ! empty( $_REQUEST['s'] ) ) {
@@ -781,17 +781,17 @@ class Bbconv_List_Table extends WP_List_Table {
 	 */
 	public static function count_with_status( $post_status ) {
 
-		$post_type = unserialize( BBCONV_TYPES );
+		$post_type = unserialize( WDBVF_TYPES );
 		if ( $post_status == 'any' ) {
-			$post_status = unserialize( BBCONV_STATUSES );
+			$post_status = unserialize( WDBVF_STATUSES );
 		}
 
 		$args = array(
 			'post_type'      => $post_type,
 			'post_status'    => $post_status,
 			'posts_per_page' => -1,
-			'meta_key'       => BBCONV_META_KEY,
-			'meta_value'     => BBCONV_META_VALUE,
+			'meta_key'       => WDBVF_META_KEY,
+			'meta_value'     => WDBVF_META_VALUE,
 		);
 
 		$posts_query = new WP_Query( $args );
@@ -859,7 +859,7 @@ class Bbconv_List_Table extends WP_List_Table {
 	 */
 	public function column_post_type( $item ) {
 
-		$url = esc_url( add_query_arg( array( 'bbconv_post_type' => $item['post_type'] ) ) );
+		$url = esc_url( add_query_arg( array( 'wdbvf_post_type' => $item['post_type'] ) ) );
 
 		$post_type_obj = get_post_type_object( $item['post_type'] );
 		$label         = $post_type_obj->labels->singular_name;
@@ -878,9 +878,9 @@ class Bbconv_List_Table extends WP_List_Table {
 	 */
 	public function column_action( $item ) {
 
-		$convert_nonce = wp_create_nonce( 'bbconv_convert_post_' . $item['ID'] );
+		$convert_nonce = wp_create_nonce( 'wdbvf_convert_post_' . $item['ID'] );
 
-		$json = '{"action":"bbconv_single_convert", "post":"' . absint( $item['ID'] ) . '", "_wpnonce":"' . $convert_nonce . '"}';
+		$json = '{"action":"wdbvf_single_convert", "post":"' . absint( $item['ID'] ) . '", "_wpnonce":"' . $convert_nonce . '"}';
 
 		$action = '<a href="#" id="wdbvf-single-convert-' . absint( $item['ID'] ) . '" class="wdbvf-single-convert" data-json=\'' . $json . '\'>' . __( 'Convert', WDBVF_DOMAIN ) . '</a>';
 
@@ -921,20 +921,20 @@ class Bbconv_List_Table extends WP_List_Table {
 	 */
 	protected function get_views() {
 		$status_links  = array();
-		$post_statuses = unserialize( BBCONV_STATUSES );
+		$post_statuses = unserialize( WDBVF_STATUSES );
 		array_unshift( $post_statuses, 'any' );
 		foreach ( $post_statuses as $status ) {
 			$status_count = self::count_with_status( $status );
 			if ( $status_count > 0 ) {
-				$label = bbconv_status_label( $status );
-				if ( ( empty( $_REQUEST['bbconv_post_status'] ) && $status == 'any' )
-					|| ( ! empty( $_REQUEST['bbconv_post_status'] ) && $_REQUEST['bbconv_post_status'] == $status ) ) {
+				$label = wdbvf_status_label( $status );
+				if ( ( empty( $_REQUEST['wdbvf_post_status'] ) && $status == 'any' )
+					|| ( ! empty( $_REQUEST['wdbvf_post_status'] ) && $_REQUEST['wdbvf_post_status'] == $status ) ) {
 					$status_links[ $status ] = '<strong>' . $label . '</strong> (' . $status_count . ')';
 				} else {
 					if ( $status == 'any' ) {
 						$url = '?page=' . $_REQUEST['page'];
 					} else {
-						$url = '?page=' . $_REQUEST['page'] . '&bbconv_post_status=' . $status;
+						$url = '?page=' . $_REQUEST['page'] . '&wdbvf_post_status=' . $status;
 					}
 					$status_links[ $status ] = '<a href="' . $url . '">' . $label . '</a> (' . $status_count . ')';
 				}
@@ -950,17 +950,17 @@ class Bbconv_List_Table extends WP_List_Table {
 	 * @param string $which
 	 */
 	function extra_tablenav( $which ) {
-		$post_types = unserialize( BBCONV_TYPES );
+		$post_types = unserialize( WDBVF_TYPES );
 		if ( $which == 'top' ) {
 			if ( $this->has_items() ) {
 				?>
 			<div class="alignleft actions bulkactions">
-				<select name="bbconv_post_type">
+				<select name="wdbvf_post_type">
 					<option value="">All Post Types</option>
 					<?php
 					foreach ( $post_types as $post_type ) {
 						$selected = '';
-						if ( ! empty( $_REQUEST['bbconv_post_type'] ) && $_REQUEST['bbconv_post_type'] == $post_type ) {
+						if ( ! empty( $_REQUEST['wdbvf_post_type'] ) && $_REQUEST['wdbvf_post_type'] == $post_type ) {
 							$selected = ' selected = "selected"';
 						}
 						$post_type_obj = get_post_type_object( $post_type );
@@ -971,7 +971,7 @@ class Bbconv_List_Table extends WP_List_Table {
 					}
 					?>
 				</select>
-				<?php submit_button( __( 'Filter', WDBVF_DOMAIN ), 'action', 'bbconv_filter_btn', false ); ?>
+				<?php submit_button( __( 'Filter', WDBVF_DOMAIN ), 'action', 'wdbvf_filter_btn', false ); ?>
 			</div>
 				<?php
 			}
