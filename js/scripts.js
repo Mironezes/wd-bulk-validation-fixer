@@ -82,10 +82,6 @@
 		})
 		.done(function( data ){
 			doingAjax = false;
-			if ( typeof data !== "object" ) {
-				$output.html( wdbvfObj.serverErrorMessage );
-				return;
-			}
 			if ( data.error ) {
 				$output.html( data.message );
 				return;
@@ -160,10 +156,6 @@
 		})
 		.done(function( data ){
 			doingAjax = false;
-			if ( typeof data !== "object" ) {
-				$output.html( wdbvfObj.serverErrorMessage );
-				return;
-			}
 			if ( data.error ) {
 				$output.html( data.message );
 				return;
@@ -215,10 +207,6 @@
 		})
 		.done(function( data ){
 			doingAjax = false;
-			if ( typeof data !== "object" ) {
-				$output.html( wdbvfObj.serverErrorMessage );
-				return;
-			}
 			if ( data.error ) {
 				$output.html( data.message );
 				return;
@@ -264,12 +252,7 @@
 			let is_validation_only = sessionStorage.getItem('wdbc_validation_only');
 
 			doingAjax = false;
-			if ( typeof data !== "object" ) {
-				$linkObject.parent().html( wdbvfObj.failedMessage );
-				return;
-			}
 			if ( data.error ) {
-				$linkObject.parent().html( wdbvfObj.failedMessage );
 				return;
 			}
 			if(is_validation_only) {
@@ -284,7 +267,7 @@
 		})
 		.fail(function(){
 			doingAjax = false;
-			$linkObject.parent().html( wdbvfObj.failedMessage );
+			
 		});
 	}
 	
@@ -309,25 +292,17 @@
 		})
 		.done(function( data ){
 			doingAjax = false;
-			$("#wdbvf-convert-checkbox-"+jsonData.post).prop("checked", false);
-			$("#wdbvf-convert-checkbox-"+jsonData.post).prop("disabled", true);
-			if ( typeof data !== "object" ) {
-				$linkObject.parent().html( wdbvfObj.failedMessage );
-				return;
-			}
-			if ( data.error ) {
-				$linkObject.parent().html( wdbvfObj.failedMessage );
-				return;
-			}
-			$linkObject.parent().html( wdbvfObj.convertedSingleMessage );
-			convertPosts();
 			return;
 		})
 		.fail(function(){
 			doingAjax = false;
+			console.log('An error occured');
+		}).
+		always(function(){
 			$("#wdbvf-convert-checkbox-"+jsonData.post).prop("checked", false);
 			$("#wdbvf-convert-checkbox-"+jsonData.post).prop("disabled", true);
-			$linkObject.parent().html( wdbvfObj.failedMessage );
+			$linkObject.parent().html( wdbvfObj.convertedSingleMessage );
+			convertPosts();
 		});
 	}
 	

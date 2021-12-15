@@ -6,7 +6,7 @@
  * GitHub Plugin URI: https://github.com/Mironezes/wd-bulk-validation-fixer
  * Primary Branch: realise
  * Description: Fixes all known validaiton issues on WD satellites posts.
- * Version: 0.3
+ * Version: 0.4
  * Author: Alexey Suprun
  * Author URI: https://github.com/mironezes
  * License: GPL-2.0+
@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 require_once('helpers.php');
 
-define( 'WDBVF_VERSION', '0.3' );   
+define( 'WDBVF_VERSION', '0.4' );   
 define( 'WDBVF_DOMAIN', 'wdbvf' );                   // Text Domain
 define( 'WDBVF_SLUG', 'wd-bulk-validation-fixer' );      // Plugin slug
 define( 'WDBVF_FOLDER', plugin_dir_path( __FILE__ ) );    // Plugin folder
@@ -65,8 +65,6 @@ function wdbvf_init_the_plugin() {
 
 
 function wdbvf_on_save_post_validation_fix($id) {
-	
-  remove_action('save_post_post', 'wdbvf_on_save_post_validation_fix', 25);
 	remove_action('publish_post', 'wdbvf_on_save_post_validation_fix', 25);
 
 	$post = get_post($id);
@@ -124,13 +122,10 @@ function wdbvf_on_save_post_validation_fix($id) {
 					);
 					wp_update_post($args);
 				}
-	
-  add_action('save_post_post', 'wdbvf_on_save_post_validation_fix', 25);
 	add_action('publish_post', 'wdbvf_on_save_post_validation_fix', 25);
 }
-
-add_action('save_post_post', 'wdbvf_on_save_post_validation_fix', 25);
 add_action('publish_post', 'wdbvf_on_save_post_validation_fix', 25);
+
 
 /**
  * Check if Block Editor is active.
@@ -621,7 +616,7 @@ function wdbvf_single_convert_ajax() {
 		$post = get_post($post_id);
 		$url = '/'.$post->post_name.'/';
 
-		$filtered_content_stage1 = bbc_regex_post_content_filters(get_post_field('post_content', $post_id));
+		$filtered_content_stage1 = bbc_regex_post_content_filters($_POST['content']);
 		$filtered_content_stage2 = bbc_set_image_dimension($filtered_content_stage1);
 		$filtered_content_stage3 = bbc_alt_singlepage_autocomplete($post_id, $filtered_content_stage2);
 
@@ -1039,7 +1034,7 @@ class Bbconv_List_Table extends WP_List_Table {
 		/** Process bulk action */
 		$this->process_bulk_action();
 
-		$per_page    = $this->get_items_per_page( 'posts_per_page', 200 );
+		$per_page    = $this->get_items_per_page( 'posts_per_page', -1 );
 		$total_items = self::count_items();
 
 		$this->set_pagination_args(
