@@ -120,81 +120,85 @@ function bbc_check_url_status($url, $condition = null)
 function bbc_set_image_dimension($content)
 {
 
-    $buffer = $content;
+    $buffer = stripslashes($content);
+
+    var_dump($buffer);
 
     // Get all images
     $pattern1 = '/<img(?:[^>])*+>/i';
     preg_match_all($pattern1, $content , $first_match);
 
     $all_images = array_merge($first_match[0]);
+
     foreach ($all_images as $image)
     {
 
-        $tmp = $image;
 
+        $tmp = $image;
         // Removing existing width/height attributes
         $clean_image = preg_replace('/\swidth="(\d*(px%)?)"(\sheight="(\w+)")?/', '', $tmp);
         $clean_image = preg_replace('/loading="lazy"/', '', $clean_image);
 
         if ($clean_image)
         {
-
             // Get link of the file
             preg_match('/src=[\'"]([^\'"]+)/', $clean_image, $src_match);
 
-            // Compares src with banned hosts
-            $in_block_list = false;
-            $exceptions = get_option('wdss_excluded_hosts_dictionary', '');
-            // chemistryland.com, fin.gc.ca, support.revelsystems.com
-            if(!empty($exceptions) && is_array($exceptions)) {
-                foreach ($exceptions as $exception)
-                {
-                    if (strpos($src_match[1], $exception) !== false)
+            if(!empty($src_match)) {
+                // Compares src with banned hosts
+                $in_block_list = false;
+                $exceptions = get_option('wdss_excluded_hosts_dictionary', '');
+                // chemistryland.com, fin.gc.ca, support.revelsystems.com
+                if(!empty($exceptions) && is_array($exceptions)) {
+                    foreach ($exceptions as $exception)
                     {
-                        $in_block_list = true;
+                        if (strpos($src_match[1], $exception) !== false)
+                        {
+                            $in_block_list = true;
+                        }
                     }
                 }
+
+                // If image is BLOB encoded
+                if (!empty(strpos($src_match[0], 'data:image')))
+                {
+
+                    $image_url = $src_match[1];
+
+                    $binary = base64_decode(explode(',', $image_url) [1]);
+
+                    $image_data = getimagesizefromstring($binary) ? getimagesizefromstring($binary) : false;
+
+                    if ($image_data)
+                    {
+                        $width = $image_data[0];
+                        $height = $image_data[1];
+                    }
+                }
+
+                // Regular src case
+                else
+                {
+                    // If image`s host in block list then remove it
+                    if ($in_block_list)
+                    {
+                        $buffer = str_replace($tmp, '', $buffer);
+                        return $buffer;
+                    }
+                    // If src doesn`t contains SERVER NAME then add it
+                    if (strpos($src_match[1], 'wp-content') && strpos($src_match[1], 'https') === false)
+                    {
+                        $src_match[1] = 'https://' . $_SERVER['SERVER_NAME'] . $src_match[1] . '';
+                    }
+                    // If image src returns 200 status then get image size
+                    if (bbc_check_url_status($src_match[1]))
+                    {
+                        list($width, $height) = getimagesize($src_match[1]);
+                    }
+                }
+
             }
 
-            // If image is BLOB encoded
-            if (!empty(strpos($src_match[0], 'data:image')))
-            {
-
-                $image_url = $src_match[1];
-
-                $binary = base64_decode(explode(',', $image_url) [1]);
-
-                // if (!getimagesizefromstring($binary)) return;
-
-                $image_data = getimagesizefromstring($binary) ? getimagesizefromstring($binary) : false;
-
-                if ($image_data)
-                {
-                    $width = $image_data[0];
-                    $height = $image_data[1];
-                }
-            }
-
-            // Regular src case
-            else
-            {
-                // If image`s host in block list then remove it
-                if ($in_block_list)
-                {
-                    $buffer = str_replace($tmp, '', $buffer);
-                    return $buffer;
-                }
-                // If src doesn`t contains SERVER NAME then add it
-                if (strpos($src_match[1], 'wp-content') && strpos($src_match[1], 'https') === false)
-                {
-                    $src_match[1] = 'https://' . $_SERVER['SERVER_NAME'] . $src_match[1] . '';
-                }
-                // If image src returns 200 status then get image size
-                if (bbc_check_url_status($src_match[1]))
-                {
-                    list($width, $height) = getimagesize($src_match[1]);
-                }
-            }
 
             // Checks if width & height are defined
             if (!empty($width) && !empty($height))
@@ -223,13 +227,19 @@ function bbc_set_image_dimension($content)
 // Filters post content from validation errors
 function bbc_regex_post_content_filters($content)
 {
-    $pattern1 = '/<noscript>.*<\/noscript><img.*?>/';
+    $pattern1 = '/\n/';
+    $pattern2 = '/<div[^>]*>|<\/div>/';
+    $pattern3 = '/<noscript>.*<\/noscript><img.*?>/';
+    $pattern4 = '/<p[^>]*><\\/p[^>]*>/';
+    $pattern5 = '/>(<\/p>)/';
 
-    $filtered1 = preg_replace('/\n/', "", $content);
-    $filtered2 = preg_replace('/<div[^>]*>|<\/div>/', '', $filtered1);
-    $filtered3 = preg_replace($pattern1, '', $filtered2);
+    $filtered1 = preg_replace($pattern1, "", $content);
+    $filtered2 = preg_replace($pattern2, '', $filtered1);
+    $filtered3 = preg_replace($pattern3, '', $filtered2);
+    $filtered4 = preg_replace($pattern4, "", $filtered3);
+    $filtered5 = preg_replace($pattern5, ">", $filtered4);
 
-    return $filtered3;
+    return $filtered5;
 }
 
 // Adds alts for post content images
