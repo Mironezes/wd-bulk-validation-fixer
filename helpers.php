@@ -1,87 +1,4 @@
 <?php
-// Picks random image from predifined lists
-function bbc_rand_image_from_list($post_id)
-{
-    $category = get_the_category($post_id);
-
-    if (!empty($category))
-    {
-
-        $option_postfix = preg_replace('/\-+/', '_', strtolower($category[0]->slug));
-
-        $option = get_option('wdss_featured_images_list_' . $option_postfix, '');
-
-        if ($option)
-        {
-            $images_ids_arr = explode(',', $option);
-            $rand_index = array_rand($images_ids_arr);
-            $image_id = intval($images_ids_arr[$rand_index]);
-            set_post_thumbnail($post_id, $image_id);
-        }
-    }
-}
-
-function bbc_attach_first_post_image($post_id, $file, $desc = 'Image')
-{
-    global $debug; // by default: true
-    if (!function_exists('media_handle_sideload'))
-    {
-        require_once ABSPATH . 'wp-admin/includes/image.php';
-        require_once ABSPATH . 'wp-admin/includes/file.php';
-        require_once ABSPATH . 'wp-admin/includes/media.php';
-    }
-
-    // Download image by given url
-    $tmp = download_url($file);
-
-    // Prepares data to be attach in WP Media
-    $file_array = ['name' => basename($file) , 'tmp_name' => $tmp];
-
-    // If error then removes tmp file
-    if (is_wp_error($tmp))
-    {
-        $file_array['tmp_name'] = '';
-        if ($debug) echo 'Error: there`s no tmp file! <br />';
-    }
-
-    // If Debug mode is enabled then shows details
-    // if( $debug ) {
-    //   echo 'File array: <br />';
-    //   var_dump( $file_array );
-    //   echo '<br /> Post id: ' . $post_id . '<br />';
-    // }
-    // Sets data as new media file in WP Media
-    $id = media_handle_sideload($file_array, $post_id, $desc);
-
-    // Checks if there`s any errors
-    if (is_wp_error($id))
-    {
-        // var_dump( $id->get_error_messages() );
-        return false;
-    }
-    else
-    {
-        update_post_meta($post_id, '_thumbnail_id', $id);
-        return true;
-    }
-
-    // Removes tmp file
-    @unlink($tmp);
-}
-
-
-// Checks image dimensions
-function bbc_check_image_size($url)
-{
-    list($width, $height) = getimagesize($url);
-
-    if (isset($width) && isset($height) && $width > 100)
-    {
-        return true;
-    }
-    return false;
-}
-
 // URL Status Code Checker
 function bbc_check_url_status($url, $condition = null)
 {
@@ -122,27 +39,28 @@ function bbc_set_image_dimension($content)
 
     $buffer = stripslashes($content);
 
-    var_dump($buffer);
-
     // Get all images
     $pattern1 = '/<img(?:[^>])*+>/i';
-    preg_match_all($pattern1, $content , $first_match);
+    preg_match_all($pattern1, $buffer , $first_match);
 
     $all_images = array_merge($first_match[0]);
 
     foreach ($all_images as $image)
     {
 
-
         $tmp = $image;
         // Removing existing width/height attributes
         $clean_image = preg_replace('/\swidth="(\d*(px%)?)"(\sheight="(\w+)")?/', '', $tmp);
         $clean_image = preg_replace('/loading="lazy"/', '', $clean_image);
 
+        var_dump($clean_image);
+
         if ($clean_image)
         {
             // Get link of the file
             preg_match('/src=[\'"]([^\'"]+)/', $clean_image, $src_match);
+
+            var_dump($src_match);
 
             if(!empty($src_match)) {
                 // Compares src with banned hosts
@@ -228,18 +146,22 @@ function bbc_set_image_dimension($content)
 function bbc_regex_post_content_filters($content)
 {
     $pattern1 = '/\n/';
-    $pattern2 = '/<div[^>]*>|<\/div>/';
-    $pattern3 = '/<noscript>.*<\/noscript><img.*?>/';
-    $pattern4 = '/<p[^>]*><\\/p[^>]*>/';
-    $pattern5 = '/>(<\/p>)/';
+    $pattern2 = '/<!--(.*?)-->/';
+    $pattern3 = '/<div[^>]*>|<\/div>/';
+    $pattern4 = '/<noscript>.*<\/noscript><img.*?>/';
+    $pattern5 = '/<figure[^>]*><\/figure[^>]*>/';
+    $pattern6 = '/<p[^>]*><\/p[^>]*>/';
+    $pattern7 = '/<\/p><p>/'; 
 
     $filtered1 = preg_replace($pattern1, "", $content);
     $filtered2 = preg_replace($pattern2, '', $filtered1);
     $filtered3 = preg_replace($pattern3, '', $filtered2);
-    $filtered4 = preg_replace($pattern4, "", $filtered3);
-    $filtered5 = preg_replace($pattern5, ">", $filtered4);
+    $filtered4 = preg_replace($pattern4, '', $filtered3);
+    $filtered5 = preg_replace($pattern5, "", $filtered4);
+    $filtered6 = preg_replace($pattern6, "", $filtered5);
+    $filtered7 = preg_replace($pattern6, "", $filtered6);
 
-    return $filtered5;
+    return $filtered7;
 }
 
 // Adds alts for post content images
@@ -248,20 +170,24 @@ function bbc_alt_singlepage_autocomplete($id, $content)
     $post = get_post($id);
     $old_content = $content;
 
-    preg_match_all('/<img[^>]+>/', $content, $images);
+    $any_alt_pattern = '/alt="(.*)"/';
+    $empty_alt_pattern = '/alt=["\']\s?["\']/';
+    $image_pattern = '/<img[^>]+>/';
+
+    preg_match_all($image_pattern, $content, $images);
 
     if (!is_null($images))
     {
         foreach ($images[0] as $index => $value)
         {
-            if (!preg_match('/alt=/', $value))
+            if (!preg_match('/alt=/', $value) || function_exists('pll_current_language') && preg_match($any_alt_pattern, $value))
             {
-                $new_img = str_replace('<img', '<img alt="' . esc_attr($post->post_title) . '"', $images[0][$index]);
+                $new_img = str_replace('<img', '<img alt="' . $post->post_title . '"', $images[0][$index]);
                 $content = str_replace($images[0][$index], $new_img, $content);
             }
-            else if (preg_match('/alt=["\']\s?["\']/', $value))
+            else if (preg_match($empty_alt_pattern, $value))
             {
-                $new_img = preg_replace('/alt=["\']\s?["\']/', 'alt="' . esc_attr($post->post_title) . '"', $images[0][$index]);
+                $new_img = preg_replace($empty_alt_pattern, 'alt="' . $post->post_title . '"', $images[0][$index]);
                 $content = str_replace($images[0][$index], $new_img, $content);
             }
         }

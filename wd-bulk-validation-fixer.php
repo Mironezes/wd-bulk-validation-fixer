@@ -6,7 +6,7 @@
  * GitHub Plugin URI: https://github.com/Mironezes/wd-bulk-validation-fixer
  * Primary Branch: realise
  * Description: Fixes all known validaiton issues on WD satellites posts.
- * Version: 0.4
+ * Version: 0.4.1
  * Author: Alexey Suprun
  * Author URI: https://github.com/mironezes
  * License: GPL-2.0+
@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 require_once('helpers.php');
 
-define( 'WDBVF_VERSION', '0.4' );   
+define( 'WDBVF_VERSION', '0.4.1' );   
 define( 'WDBVF_DOMAIN', 'wdbvf' );                   // Text Domain
 define( 'WDBVF_SLUG', 'wd-bulk-validation-fixer' );      // Plugin slug
 define( 'WDBVF_FOLDER', plugin_dir_path( __FILE__ ) );    // Plugin folder
@@ -49,8 +49,6 @@ function wdbvf_init_the_plugin() {
 	add_action( 'admin_menu', 'wdbvf_display_menu_item' );
 	// scan posts via ajax
 	add_action( 'wp_ajax_wdbvf_scan_posts', 'wdbvf_scan_posts_ajax' );
-	// bulk all posts convert
-	add_action( 'wp_ajax_wdbvf_bulk_convert', 'wdbvf_bulk_convert_ajax' );
 	// single post convert via ajax
 	add_action( 'wp_ajax_wdbvf_single_convert', 'wdbvf_single_convert_ajax' );
 	// automatically index posts on creation and updating
@@ -355,102 +353,6 @@ function wdbvf_scan_posts_ajax() {
 	die( json_encode( $json ) );
 }
 
-/**
- * Bulk converting of all indexed posts via ajax.
- */
-function wdbvf_bulk_convert_ajax() {
-	header( 'Content-Type: application/json; charset=UTF-8' );
-
-	$json  = array();
-	$nonce = esc_attr( $_REQUEST['_wpnonce'] );
-	if ( ! wp_verify_nonce( $nonce, 'wdbvf_bulk_convert' ) ) {
-		$json['error']   = true;
-		$json['message'] = '<div class="error"><p>' . __( 'Forbidden!', WDBVF_DOMAIN ) . '</p></div>';
-		die( json_encode( $json ) );
-	}
-
-	if ( ! empty( $_GET['total'] ) ) {
-		$offset         = intval( $_GET['offset'] );
-		$total_expected = intval( $_GET['total'] );
-
-		$post_types    = unserialize( WDBVF_TYPES );
-		$post_statuses = unserialize( WDBVF_STATUSES );
-
-		$total_actual = wdbvf_get_count( $post_types );
-		if ( $total_expected == -1 ) {
-			$total_expected = $total_actual;
-		}
-
-		$json = array(
-			'error'     => false,
-			'offset'    => $total_expected,
-			'total'     => $total_expected,
-			'message'   => '',
-			'postsData' => array(),
-		);
-
-		if ( $total_expected != ( $total_actual + $offset ) ) {
-			$json['error']   = true;
-			$json['message'] = '<div class="error"><p>' . __( 'An error occurred while bulk converting! Someone added or deleted one or more posts during the converting process. Try again.', WDBVF_DOMAIN ) . '</p></div>';
-			die( json_encode( $json ) );
-		}
-
-		$args        = array(
-			'post_type'      => $post_types,
-			'post_status'    => $post_statuses,
-			'posts_per_page' => 10,
-			'meta_key'       => WDBVF_META_KEY,
-			'meta_value'     => WDBVF_META_VALUE,
-		);
-		$posts_array = get_posts( $args );
-
-		$posts_data = array();
-		foreach ( $posts_array as $post ) {
-
-			$post_id = $post->ID;
-
-			$filtered_content_stage1 = bbc_regex_post_content_filters(get_post_field('post_content', $post_id));
-			$filtered_content_stage2 = bbc_set_image_dimension($filtered_content_stage1);
-			$filtered_content_stage3 = bbc_alt_singlepage_autocomplete($post_id, $filtered_content_stage2);
-		
-			$posts_data[] = array(
-				'id' => $post_id,
-				'content' => $filtered_content_stage3,
-				'tags_input' => '',
-				'meta_input' => [
-					'wdss_validation_fixed' => true
-				]
-			);
-			$offset++;
-		}
-		$json['postsData'] = $posts_data;
-
-		$json['offset']  = $offset;
-		$percentage      = (int) ( $offset / $total_expected * 100 );
-		$json['message'] = '<p>' . sprintf( __( 'Converting... %s%%', WDBVF_DOMAIN ), $percentage ) . '</p>';
-
-		die( json_encode( $json ) );
-	}
-
-	if ( ! empty( $_POST['total'] ) ) {
-		$json = array(
-			'error'  => false,
-			'offset' => intval( $_POST['offset'] ),
-			'total'  => intval( $_POST['total'] ),
-		);
-		foreach ( $_POST['postsData'] as $post ) {
-			$post_data = array(
-				'ID'           => $post['id'],
-				'post_content' => $post['content']
-			);
-			if ( ! wp_update_post( $post_data ) ) {
-				$json['error'] = true;
-				die( json_encode( $json ) );
-			}
-		}
-		die( json_encode( $json ) );
-	}
-}
 
 /**
  * Find content created in Classic editor
