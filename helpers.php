@@ -53,14 +53,10 @@ function bbc_set_image_dimension($content)
         $clean_image = preg_replace('/\swidth="(\d*(px%)?)"(\sheight="(\w+)")?/', '', $tmp);
         $clean_image = preg_replace('/loading="lazy"/', '', $clean_image);
 
-        var_dump($clean_image);
-
         if ($clean_image)
         {
             // Get link of the file
             preg_match('/src=[\'"]([^\'"]+)/', $clean_image, $src_match);
-
-            var_dump($src_match);
 
             if(!empty($src_match)) {
                 // Compares src with banned hosts
@@ -78,10 +74,15 @@ function bbc_set_image_dimension($content)
                 }
 
                 // If image is BLOB encoded
-                if (!empty(strpos($src_match[0], 'data:image')))
+                if (!empty(strpos($src_match[1], 'image/')))
                 {
 
-                    $image_url = $src_match[1];
+                    if(empty(strpos($src_match[1], 'data:image'))) {
+                        $image_url = preg_replace('/image\//', "data:image/", $src_match[1]);
+                    }
+                    else {
+                        $image_url = $src_match[1];
+                    }
 
                     $binary = base64_decode(explode(',', $image_url) [1]);
 
@@ -103,10 +104,13 @@ function bbc_set_image_dimension($content)
                         $buffer = str_replace($tmp, '', $buffer);
                         return $buffer;
                     }
+                    
+                    $protocol = stripos($_SERVER['SERVER_PROTOCOL'],'https') === 0 ? 'https://' : 'http://';
+
                     // If src doesn`t contains SERVER NAME then add it
-                    if (strpos($src_match[1], 'wp-content') && strpos($src_match[1], 'https') === false)
+                    if (strpos($src_match[1], 'wp-content') && strpos($src_match[1], $protocol) === false)
                     {
-                        $src_match[1] = 'https://' . $_SERVER['SERVER_NAME'] . $src_match[1] . '';
+                        $src_match[1] = $protocol . $_SERVER['SERVER_NAME'] . $src_match[1] . '';
                     }
                     // If image src returns 200 status then get image size
                     if (bbc_check_url_status($src_match[1]))
@@ -152,6 +156,7 @@ function bbc_regex_post_content_filters($content)
     $pattern5 = '/<figure[^>]*><\/figure[^>]*>/';
     $pattern6 = '/<p[^>]*><\/p[^>]*>/';
     $pattern7 = '/<\/p><p>/'; 
+    $pattern8 = '/<p>(<iframe[^>]*><\/iframe[^>]*>)<\/p>/';
 
     $filtered1 = preg_replace($pattern1, "", $content);
     $filtered2 = preg_replace($pattern2, '', $filtered1);
@@ -160,8 +165,9 @@ function bbc_regex_post_content_filters($content)
     $filtered5 = preg_replace($pattern5, "", $filtered4);
     $filtered6 = preg_replace($pattern6, "", $filtered5);
     $filtered7 = preg_replace($pattern6, "", $filtered6);
+    $filtered8 = preg_replace($pattern8, '$1', $filtered7);
 
-    return $filtered7;
+    return $filtered8;
 }
 
 // Adds alts for post content images
@@ -173,6 +179,9 @@ function bbc_alt_singlepage_autocomplete($id, $content)
     $any_alt_pattern = '/alt="(.*)"/';
     $empty_alt_pattern = '/alt=["\']\s?["\']/';
     $image_pattern = '/<img[^>]+>/';
+    
+    $post_title = str_replace('"', "", $post->post_title); 
+    $post_title = mb_strtolower($post_title);
 
     preg_match_all($image_pattern, $content, $images);
 
@@ -182,12 +191,18 @@ function bbc_alt_singlepage_autocomplete($id, $content)
         {
             if (!preg_match('/alt=/', $value) || function_exists('pll_current_language') && preg_match($any_alt_pattern, $value))
             {
-                $new_img = str_replace('<img', '<img alt="' . $post->post_title . '"', $images[0][$index]);
+                if(function_exists('pll_current_language')) {
+                    $new_img = preg_replace('/alt=".*?"/', '', $images[0][$index]);
+                    $new_img = str_replace('<img', '<img alt="' . $post_title  . '"', $new_img);
+                }
+                else {
+                    $new_img = str_replace('<img', '<img alt="' . $post_title . '"', $images[0][$index]);
+                }
                 $content = str_replace($images[0][$index], $new_img, $content);
             }
             else if (preg_match($empty_alt_pattern, $value))
             {
-                $new_img = preg_replace($empty_alt_pattern, 'alt="' . $post->post_title . '"', $images[0][$index]);
+                $new_img = preg_replace($empty_alt_pattern, 'alt="' . $post_title . '"', $images[0][$index]);
                 $content = str_replace($images[0][$index], $new_img, $content);
             }
         }

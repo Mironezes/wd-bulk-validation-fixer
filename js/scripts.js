@@ -7,68 +7,20 @@
 		$singleConvertLinks = $('.wdbvf-single-convert'),
 		$doactionTopBtn = $('#doaction'),
 		$doactionBottomBtn = $('#doaction2'),
-		$validationOnlyCheckbox = $('#wdbvf-validation-only input');
-		$resetValidationBtn = $('#wdbvf-validation-only button');
 		convertQueue = [],
 		doingAjax = false;
 		
-		if(sessionStorage.getItem('wdbc_validation_only')){
-			$validationOnlyCheckbox.prop('checked', true);
-		}
 
-   $validationOnlyCheckbox.on('click', function() {
-      if(sessionStorage.getItem('wdbc_validation_only')) { 
-				sessionStorage.removeItem('wdbc_validation_only');
-			}
-			else {
-				sessionStorage.setItem('wdbc_validation_only', true);
-			}
-	 });
-
-
-	// creating hidden Blocks editor
-	const settings = {
-		editorMode: 'visual',
-		panels: {
-			'post-status': {
-				opened: true
-			}
-		},
-		features: {
-			fixedToolbar: false,
-			welcomeGuide: true,
-			fullscreenMode: true,
-			showIconLabels: false,
-			themeStyles: true,
-			showBlockBreadcrumbs: true,
-			welcomeGuideTemplate: true
-		},
-		hiddenBlockTypes: [],
-		preferredStyleVariations: {},
-		localAutosaveInterval: 15
-	};
-
-	$('<div />').attr('id', 'wdbvf-editor').attr('style', 'display: none').appendTo('body');
-	wp.editPost.initializeEditor('wdbvf-editor', 'post', 1, settings);
-	
 	$scanBtn.click(function(e){
 
 		e.preventDefault();
 		$scanBtn.prop("disabled", true);
 		$convertAllBtn.hide();
-
-		if(sessionStorage.getItem('wdbc_validation_only')) 	{
-			scanPosts(0, -1, 1);
-		}
-		else {
-			scanPosts(0, -1, 0);
-		}
+		scanPosts(0, -1);
 	});
 	
 	// scanning posts via ajax
-	function scanPosts( offset = 0, total = -1, mode) {
-		$mode = mode;
-		console.log($mode);
+	function scanPosts( offset = 0, total = -1) {
 
 		if ( doingAjax ) return;
 		doingAjax = true;
@@ -78,7 +30,7 @@
 		$.ajax({
 			method: "POST",
 			url: wdbvfObj.ajaxUrl,
-			data: { action : "wdbvf_scan_posts", mode : $mode, offset : offset, total : total, _wpnonce : nonce }
+			data: { action : "wdbvf_scan_posts", offset : offset, total : total, _wpnonce : nonce }
 		})
 		.done(function( data ){
 			doingAjax = false;
@@ -92,10 +44,7 @@
 				document.location.href = document.location.href + "&wdbvf_scan_finished=1";
 				return;
 			}
-			if(sessionStorage.getItem('wdbc_validation_only')){
-				$validationOnlyCheckbox.prop('checked', true);
-			}
-			scanPosts( data.offset, data.total, $mode);
+			scanPosts( data.offset, data.total);
 			$output.html( data.message );
 		})
 		.fail(function(){
@@ -104,14 +53,8 @@
 		});
 	}
 	
-	// "Bulk Convert All" button handler
-	$convertAllBtn.click(function(e){
-		e.preventDefault();
-		if( ! confirm( wdbvfObj.confirmConvertAllMessage ) ) return;
-		$convertAllBtn.prop("disabled", true);
-		bulkConvertPosts();
-	});
-	
+
+
 	// table "Convert" link handler
 	$singleConvertLinks.click(function(e){
 		e.preventDefault();
@@ -121,30 +64,10 @@
 		convertPosts();
 	});
 	
-	// reset validation status
-	$resetValidationBtn.on('click', function() {
-		let confirm = window.confirm('Are you sure?') ? true : false;
-		let data_obj = {
-			data: 'true',
-			action: 'reset_posts_validation_status',
-			noncw: wdbvfObj.resetPostsValidationNonce
-		};
-		if(confirm) {
-			jQuery.ajax({
-				url: wdbvfObj.ajaxUrl,
-				type: 'post',
-				data: data_obj
-			});
-		}
-
-	});
-
 
 	// bulk posts converting via ajax
 	function bulkConvertPosts( offset = 0, total = -1){
 		if ( doingAjax ) return;
-
-		let is_validation_only = sessionStorage.getItem('wdbc_validation_only');
 
 		doingAjax = true;
 		var nonce = $convertAllBtn.data('nonce');
@@ -164,18 +87,10 @@
 			var arrayLength = data.postsData.length;
 			for (var i = 0; i < arrayLength; i++) {
 
-				if(is_validation_only) {
-					var convertedPost = {
-						id		: data.postsData[i].id,
-						content	: data.postsData[i].content
-					};
-				}
-				else {
-					var convertedPost = {
-						id		: data.postsData[i].id,
-						content	: convertToBlocks( data.postsData[i].content )
-					};
-				}
+				var convertedPost = {
+					id		: data.postsData[i].id,
+					content	: data.postsData[i].content
+				};
 
 				convertedData.push( convertedPost );
 			}
@@ -229,10 +144,6 @@
 	
 	// single or group posts converting via ajax
 	function convertPosts(){
-		if(sessionStorage.getItem('wdbc_validation_only')){
-			$validationOnlyCheckbox.prop('checked', true);
-		}
-
 		if( convertQueue.length == 0 ){
 			$doactionTopBtn.prop("disabled", false);
 			$doactionBottomBtn.prop("disabled", false);
@@ -249,20 +160,11 @@
 			data: $linkObject.data('json')
 		})
 		.done(function( data ) {
-			let is_validation_only = sessionStorage.getItem('wdbc_validation_only');
-
 			doingAjax = false;
 			if ( data.error ) {
 				return;
 			}
-			if(is_validation_only) {
-				saveConverted( data.message, $linkObject );
-			}
-			else {
-				var content = convertToBlocks( data.message );
-				saveConverted( content, $linkObject );	
-			}
-
+			saveConverted( data.message, $linkObject );
 			return;
 		})
 		.fail(function(){
@@ -271,13 +173,6 @@
 		});
 	}
 	
-	// posts converting using built in Wordpress library
-	function convertToBlocks( content ){
-		var blocks = wp.blocks.rawHandler({ 
-			HTML: content
-		});
-		return wp.blocks.serialize(blocks);
-	}
 	
 	// single or group saving of converted posts via ajax
 	function saveConverted( content, $linkObject ){

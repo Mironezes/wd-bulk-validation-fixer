@@ -6,7 +6,7 @@
  * GitHub Plugin URI: https://github.com/Mironezes/wd-bulk-validation-fixer
  * Primary Branch: realise
  * Description: Fixes all known validaiton issues on WD satellites posts.
- * Version: 0.4.1
+ * Version: 0.7
  * Author: Alexey Suprun
  * Author URI: https://github.com/mironezes
  * License: GPL-2.0+
@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 require_once('helpers.php');
 
-define( 'WDBVF_VERSION', '0.4.1' );   
+define( 'WDBVF_VERSION', '0.7' );   
 define( 'WDBVF_DOMAIN', 'wdbvf' );                   // Text Domain
 define( 'WDBVF_SLUG', 'wd-bulk-validation-fixer' );      // Plugin slug
 define( 'WDBVF_FOLDER', plugin_dir_path( __FILE__ ) );    // Plugin folder
@@ -51,8 +51,6 @@ function wdbvf_init_the_plugin() {
 	add_action( 'wp_ajax_wdbvf_scan_posts', 'wdbvf_scan_posts_ajax' );
 	// single post convert via ajax
 	add_action( 'wp_ajax_wdbvf_single_convert', 'wdbvf_single_convert_ajax' );
-	// automatically index posts on creation and updating
-	add_action( 'post_updated', 'wdbvf_index_after_save', 10, 2 );
 	// resets indexes & validation status
 	add_action( 'wp_ajax_reset_posts_validation_status', 'reset_posts_validation_status' );
 }
@@ -193,7 +191,7 @@ function wdbvf_remove_gutenberg_overrides() {
  * Adding subitem to the Tools menu item.
  */
 function wdbvf_display_menu_item() {
-	$plugin_page = add_management_page( __( ' WD Bulk Block Convertor & Validation Fixer', WDBVF_DOMAIN ), __( 'WD Block Conversion', WDBVF_DOMAIN ), 'manage_options', WDBVF_SLUG, 'wdbvf_show_admin_page' );
+	$plugin_page = add_management_page( __( 'WD Bulk Validation Fixer', WDBVF_DOMAIN ), __( 'WD Validation Fixer', WDBVF_DOMAIN ), 'manage_options', WDBVF_SLUG, 'wdbvf_show_admin_page' );
 
 	// Load the JS conditionally
 	add_action( 'load-' . $plugin_page, 'wdbvf_load_admin_css_js' );
@@ -218,10 +216,9 @@ function wdbvf_enqueue_admin_css_js() {
 		'serverErrorMessage'           => '<div class="error"><p>' . __( 'Server error occured!', WDBVF_DOMAIN ) . '</p></div>',
 		'scanningMessage'              => '<p>' . sprintf( __( 'Scanning... %s%%', WDBVF_DOMAIN ), 0 ) . '</p>',
 		'bulkConvertingMessage'        => '<p>' . sprintf( __( 'Converting... %s%%', WDBVF_DOMAIN ), 0 ) . '</p>',
-		'bulkConvertingSuccessMessage' => '<div class="updated"><p>' . __( 'All posts successfully converted!', WDBVF_DOMAIN ) . '</p></div>',
 		'confirmConvertAllMessage'     => __( 'You are about to convert all classic posts to blocks. These changes are irreversible. Convert all classic posts to blocks?', WDBVF_DOMAIN ),
-		'convertingSingleMessage'      => __( 'Converting...', WDBVF_DOMAIN ),
-		'convertedSingleMessage'       => __( 'Converted', WDBVF_DOMAIN ),
+		'convertingSingleMessage'      => __( 'Processing...', WDBVF_DOMAIN ),
+		'convertedSingleMessage'       => __( 'Completed', WDBVF_DOMAIN ),
 		'failedMessage'                => __( 'Failed', WDBVF_DOMAIN ),
 		'resetPostsValidationNonce' => wp_create_nonce('reset-posts-validation-status-nonce'),
 	);
@@ -250,18 +247,9 @@ function wdbvf_show_admin_page() {
 		}
 	}
 	?>
-	<p><?php _e( 'This process will scan your post types for any content that may be converted to blocks. Then, you can choose to convert posts to blocks individually, or bulk convert all content to blocks.', WDBVF_DOMAIN ); ?></p>
-	<p><span style="color:red;"><?php _e( 'Please note:', WDBVF_DOMAIN ); ?></span> <?php _e( 'Converting content to blocks is irreversible. We highly recommend creating a backup before conversion.', WDBVF_DOMAIN ); ?></p>
-	<div id="wdbvf-validation-only">
-		<label>Validation Fix only <input type="checkbox" name="wdbvf_validation_only" value="1"></label>
-		<button type="button">Reset all post validation statuses</button>
-	</div>
+	<p><span style="color:red;"><?php _e( 'Please note:', WDBVF_DOMAIN ); ?></span> <?php _e( 'Processing filters on content is irreversible. Its highly recommended to create a backup before start.', WDBVF_DOMAIN ); ?></p>
 	<p>
 		<button id="wdbvf-scan-btn" class="button button-hero" data-nonce="<?php echo wp_create_nonce( 'wdbvf_scan_content' ); ?>"><?php _e( 'Scan Content', WDBVF_DOMAIN ); ?></button>
-	<!-- <?php if ( $indexed_exist ) : ?>
-		&nbsp;&nbsp;
-		<button id="wdbvf-convert-all-btn" class="button button-primary button-hero" data-nonce="<?php echo wp_create_nonce( 'wdbvf_bulk_convert' ); ?>"><?php _e( 'Bulk Convert All', WDBVF_DOMAIN ); ?></button>
-	<?php endif; ?> -->
 	</p>
 	<div id="wdbvf-output">
 	<?php if ( $indexed_exist ) : ?>
@@ -299,7 +287,6 @@ function reset_posts_validation_status() {
 function wdbvf_scan_posts_ajax() {
 	$offset         = intval( $_REQUEST['offset'] );
 	$total_expected = intval( $_REQUEST['total'] );
-	$mode = intval($_REQUEST['mode']);
 
 	$total_actual  = 0;
 	$post_types    = unserialize( WDBVF_TYPES );
@@ -341,9 +328,7 @@ function wdbvf_scan_posts_ajax() {
 	$posts_array = get_posts( $args );
 
 	foreach ( $posts_array as $post ) {
-		if ( $mode === 1 || wdbvf_find_classic( $post->post_content ) ) {
-			update_post_meta( $post->ID, WDBVF_META_KEY, WDBVF_META_VALUE );
-		}
+		update_post_meta( $post->ID, WDBVF_META_KEY, WDBVF_META_VALUE );
 		$offset++;
 	}
 	$json['offset']   = $offset;
@@ -353,21 +338,6 @@ function wdbvf_scan_posts_ajax() {
 	die( json_encode( $json ) );
 }
 
-
-/**
- * Find content created in Classic editor
- *
- * @param string $content the content of a post
- *
- * @return bool
- */
-function wdbvf_find_classic( $content ) {
-	if ( ! empty( $content )
-		&& strpos( $content, '<!-- wp:' ) === false ) {
-		return true;
-	}
-	return false;
-}
 
 /**
  * Sort the number of posts by type and create labeled array.
@@ -559,16 +529,6 @@ function wdbvf_deactivate() {
 }
 register_deactivation_hook( __FILE__, 'wdbvf_deactivate' );
 
-/**
- * Automatically index posts on creation or updating.
- */
-function wdbvf_index_after_save( $post_ID, $post_after ) {
-	if ( wdbvf_find_classic( $post_after->post_content ) ) {
-		update_post_meta( $post_ID, WDBVF_META_KEY, WDBVF_META_VALUE );
-	} else {
-		delete_post_meta( $post_ID, WDBVF_META_KEY );
-	}
-}
 
 /**
  * Dispatching POST to GET parameters.
@@ -823,7 +783,7 @@ class Bbconv_List_Table extends WP_List_Table {
 
 		$json = '{"action":"wdbvf_single_convert", "post":"' . absint( $item['ID'] ) . '", "_wpnonce":"' . $convert_nonce . '"}';
 
-		$action = '<a href="#" id="wdbvf-single-convert-' . absint( $item['ID'] ) . '" class="wdbvf-single-convert" data-json=\'' . $json . '\'>' . __( 'Convert', WDBVF_DOMAIN ) . '</a>';
+		$action = '<a href="#" id="wdbvf-single-convert-' . absint( $item['ID'] ) . '" class="wdbvf-single-convert" data-json=\'' . $json . '\'>' . __( 'Fix', WDBVF_DOMAIN ) . '</a>';
 
 		return $action;
 	}
@@ -848,7 +808,7 @@ class Bbconv_List_Table extends WP_List_Table {
 	 */
 	public function get_bulk_actions() {
 		$actions = array(
-			'bulk-convert' => __( 'Convert', WDBVF_DOMAIN ),
+			'bulk-convert' => __( 'Fix', WDBVF_DOMAIN ),
 		);
 
 		return $actions;

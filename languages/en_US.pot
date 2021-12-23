@@ -22,7 +22,7 @@ msgstr ""
 "X-Poedit-SearchPathExcluded-0: *.min.js\n"
 
 #: bulk-block-converter.php:105
-msgid "WD Bulk Block Convertor & Validation Fixer"
+msgid "WD Bulk Validation Fixer"
 msgstr ""
 
 #: bulk-block-converter.php:105
