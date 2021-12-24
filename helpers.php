@@ -1,4 +1,50 @@
 <?php
+
+function bbc_set_featured_image($post, $content) {
+    $pattern1 = '/<img(?:[^>])*+>/i';
+    preg_match($pattern1, $content, $first_image);
+    preg_match('/src=[\'"]([^\'"]+)/', $first_image[0], $src_match);
+
+    if (!empty($src_match))
+    {
+
+            if (preg_match('/^data:image\/(\w+);base64,/', $src_match[1], $type))
+            {
+                    $data = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $src_match[1]));
+                    $type = strtolower($type[1]); // jpg, png, gif
+                    if (!in_array($type, ['jpg', 'jpeg', 'gif', 'png']))
+                    {
+                            throw new \Exception('invalid image type');
+                    }
+
+                    $name = $post->post_name;
+                    $directory = "/" . date('Y') . "/" . date('m') . "/";
+                    $wp_upload_dir = wp_upload_dir();
+                    $filename = $name . ".jpg";
+                    $fileurl = "../wp-content/uploads" . $directory . $filename;
+
+                    $filetype = wp_check_filetype(basename($fileurl) , null);
+                    file_put_contents($fileurl, $data);
+                    $attachment = array(
+                            'guid' => $wp_upload_dir['url'] . '/' . basename($fileurl) ,
+                            'post_mime_type' => $filetype['type'],
+                            'post_title' => preg_replace('/\.[^.]+$/', '', basename($fileurl)) ,
+                            'post_content' => '',
+                            'post_status' => 'inherit'
+                    );
+
+                    $attach_id = wp_insert_attachment($attachment, $fileurl, $post->ID);
+                    $attach_data = wp_generate_attachment_metadata($attach_id, $fileurl);
+                    wp_update_attachment_metadata($attach_id, $attach_data);
+                    set_post_thumbnail($post->ID, $attach_id);
+            }
+    }
+}
+
+
+
+
+
 // URL Status Code Checker
 function bbc_check_url_status($url, $condition = null)
 {

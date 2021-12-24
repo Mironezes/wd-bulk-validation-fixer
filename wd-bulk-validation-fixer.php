@@ -2,11 +2,11 @@
 /**
  *
  *
- * Plugin Name: WD Bulk Validation Fixer
+ * Plugin Name: WD Bulk Content Fixer
  * GitHub Plugin URI: https://github.com/Mironezes/wd-bulk-validation-fixer
  * Primary Branch: realise
  * Description: Fixes all known validaiton issues on WD satellites posts.
- * Version: 0.7
+ * Version: 0.8
  * Author: Alexey Suprun
  * Author URI: https://github.com/mironezes
  * License: GPL-2.0+
@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 require_once('helpers.php');
 
-define( 'WDBVF_VERSION', '0.7' );   
+define( 'WDBVF_VERSION', '0.8' );   
 define( 'WDBVF_DOMAIN', 'wdbvf' );                   // Text Domain
 define( 'WDBVF_SLUG', 'wd-bulk-validation-fixer' );      // Plugin slug
 define( 'WDBVF_FOLDER', plugin_dir_path( __FILE__ ) );    // Plugin folder
@@ -29,7 +29,7 @@ define( 'WDBVF_URL', plugin_dir_url( __FILE__ ) );        // Plugin URL
 
 // post types and statuses plugin work with
 define( 'WDBVF_TYPES', serialize( array( 'post', 'page' ) ) );
-define( 'WDBVF_STATUSES', serialize( array( 'publish' ) ) );
+define( 'WDBVF_STATUSES', serialize( array( 'publish', 'future' ) ) );
 
 // meta key and value for posts inexing
 define( 'WDBVF_META_KEY', 'wdbvf_not_converted' );
@@ -51,8 +51,6 @@ function wdbvf_init_the_plugin() {
 	add_action( 'wp_ajax_wdbvf_scan_posts', 'wdbvf_scan_posts_ajax' );
 	// single post convert via ajax
 	add_action( 'wp_ajax_wdbvf_single_convert', 'wdbvf_single_convert_ajax' );
-	// resets indexes & validation status
-	add_action( 'wp_ajax_reset_posts_validation_status', 'reset_posts_validation_status' );
 }
 
 /**
@@ -62,6 +60,10 @@ function wdbvf_init_the_plugin() {
 
 function wdbvf_on_save_post_validation_fix($id) {
 	remove_action('publish_post', 'wdbvf_on_save_post_validation_fix', 25);
+
+	require_once ABSPATH . 'wp-admin/includes/image.php';
+	require_once ABSPATH . 'wp-admin/includes/file.php';
+	require_once ABSPATH . 'wp-admin/includes/media.php';
 
 	$post = get_post($id);
 
@@ -79,6 +81,10 @@ function wdbvf_on_save_post_validation_fix($id) {
 		$filtered_content_stage1 = bbc_regex_post_content_filters(get_post_field('post_content', $post_id));
 		$filtered_content_stage2 = bbc_set_image_dimension($filtered_content_stage1);
 		$filtered_content_stage3 = bbc_alt_singlepage_autocomplete($post_id, $filtered_content_stage2);
+
+				if(!has_post_thumbnail($post)) {
+					bbc_set_featured_image($post, $filtered_content_stage3);
+				}
 
     		if($in_trash) {
 					return;
@@ -112,9 +118,7 @@ function wdbvf_on_save_post_validation_fix($id) {
 					$args = array(
 						'ID' => $post_id,
 						'post_content' => $filtered_content_stage3,
-						'meta_input' => [
-							'wdss_validation_fixed' => true
-						]
+						'meta_input' => []
 					);
 					wp_update_post($args);
 				}
@@ -191,7 +195,7 @@ function wdbvf_remove_gutenberg_overrides() {
  * Adding subitem to the Tools menu item.
  */
 function wdbvf_display_menu_item() {
-	$plugin_page = add_management_page( __( 'WD Bulk Validation Fixer', WDBVF_DOMAIN ), __( 'WD Validation Fixer', WDBVF_DOMAIN ), 'manage_options', WDBVF_SLUG, 'wdbvf_show_admin_page' );
+	$plugin_page = add_management_page( __( 'WD Bulk Content Fixer', WDBVF_DOMAIN ), __( 'WD Content Fixer', WDBVF_DOMAIN ), 'manage_options', WDBVF_SLUG, 'wdbvf_show_admin_page' );
 
 	// Load the JS conditionally
 	add_action( 'load-' . $plugin_page, 'wdbvf_load_admin_css_js' );
@@ -263,21 +267,6 @@ function wdbvf_show_admin_page() {
 	</div>
 </div>
 	<?php
-}
-
-/**
- * Resets posts validation statuses.
- */
-function reset_posts_validation_status() {
-	check_ajax_referer( 'resetPostsValidationNonce', 'reset_posts_validation_status_nonce', false );
-	$response = json_decode(stripslashes($_POST['data']));
-	var_dump($response);
-
-	if($response == true) {
-		delete_metadata( 'post', 0, 'wdss_validation_fixed', false, true );
-		delete_metadata( 'post', 0, WDBVF_META_KEY, false, true );
-	}
-
 }
 
 
@@ -496,9 +485,7 @@ function wdbvf_single_convert_ajax() {
 			'ID'           => $post_id,
 			'post_content' => $filtered_content_stage3,
 			'tags_input' => '',
-			'meta_input' => [
-				'wdss_validation_fixed' => true
-			]
+			'meta_input' => []
 		);
 
 		if(get_option('wdss_410s_dictionary')) {
