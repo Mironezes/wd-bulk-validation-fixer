@@ -42,7 +42,13 @@ function bbc_set_featured_image($post, $content) {
 }
 
 
-
+// Fixes broken Base64 images
+function bbc_base64_fixer($src) {
+	if(strpos($src, 'data:image') === false) {
+		return preg_replace('/image\//', "data:image/", $src);
+	}
+	return $src;
+}
 
 
 // URL Status Code Checker
@@ -101,6 +107,11 @@ function bbc_set_image_dimension($content)
 
         if ($clean_image)
         {
+
+            // Blob-case variables
+            $is_blob = false;
+            $clean_blob_image;
+
             // Get link of the file
             preg_match('/src=[\'"]([^\'"]+)/', $clean_image, $src_match);
 
@@ -120,18 +131,12 @@ function bbc_set_image_dimension($content)
                 }
 
                 // If image is BLOB encoded
-                if (!empty(strpos($src_match[1], 'image/')))
+                if (strpos($src_match[1], 'base64') !== false)
                 {
-
-                    if(empty(strpos($src_match[1], 'data:image'))) {
-                        $image_url = preg_replace('/image\//', "data:image/", $src_match[1]);
-                    }
-                    else {
-                        $image_url = $src_match[1];
-                    }
-
+                    $is_blob = true;
+                    $image_url = bbc_base64_fixer($src_match[1]);	
+                    $clean_blob_image = '<img src="' . $image_url . '">';	
                     $binary = base64_decode(explode(',', $image_url) [1]);
-
                     $image_data = getimagesizefromstring($binary) ? getimagesizefromstring($binary) : false;
 
                     if ($image_data)
@@ -140,7 +145,6 @@ function bbc_set_image_dimension($content)
                         $height = $image_data[1];
                     }
                 }
-
                 // Regular src case
                 else
                 {
@@ -173,11 +177,17 @@ function bbc_set_image_dimension($content)
             {
                 $dimension = 'width="' . $width . '" height="' . $height . '" ';
 
-                // Add width and width attribute
-                $image = str_replace('<img', '<img loading="lazy" ' . $dimension, $clean_image);
+				// Add width and width attribute
+				if($is_blob) {
+				    $image = str_replace('<img', '<img suka loading="lazy" ' . $dimension, $clean_blob_image);
+				}
+				else {
+					$image = str_replace('<img', '<img loading="lazy" ' . $dimension, $clean_image);
+				}
 
-                // Replace image with new attributes
-                $buffer = str_replace($tmp, $image, $buffer);
+			    // Replace image with new attributes
+			    $buffer = str_replace($tmp, $image, $buffer);
+
             }
             else
             {
