@@ -179,7 +179,7 @@ function bbc_set_image_dimension($content)
 
 				// Add width and width attribute
 				if($is_blob) {
-				    $image = str_replace('<img', '<img suka loading="lazy" ' . $dimension, $clean_blob_image);
+				    $image = str_replace('<img', '<img loading="lazy" ' . $dimension, $clean_blob_image);
 				}
 				else {
 					$image = str_replace('<img', '<img loading="lazy" ' . $dimension, $clean_image);
