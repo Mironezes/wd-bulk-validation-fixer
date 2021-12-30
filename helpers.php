@@ -1,6 +1,9 @@
 <?php
 
-function bbc_set_featured_image($post, $content) {
+// Get first image and attach it to post
+function bbc_attach_first_image($post, $content)
+{
+
     $pattern1 = '/<img(?:[^>])*+>/i';
     preg_match($pattern1, $content, $first_image);
     preg_match('/src=[\'"]([^\'"]+)/', $first_image[0], $src_match);
@@ -8,48 +11,53 @@ function bbc_set_featured_image($post, $content) {
     if (!empty($src_match))
     {
 
-            if (preg_match('/^data:image\/(\w+);base64,/', $src_match[1], $type))
+        if (preg_match('/^data:image\/(\w+);base64,/', $src_match[1], $type))
+        {
+            $data = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $src_match[1]));
+            $type = strtolower($type[1]); // jpg, png, gif
+            if (!in_array($type, ['jpg', 'jpeg', 'gif', 'png']))
             {
-                    $data = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $src_match[1]));
-                    $type = strtolower($type[1]); // jpg, png, gif
-                    if (!in_array($type, ['jpg', 'jpeg', 'gif', 'png']))
-                    {
-                            throw new \Exception('invalid image type');
-                    }
-
-                    $name = $post->post_name;
-                    $directory = "/" . date('Y') . "/" . date('m') . "/";
-                    $wp_upload_dir = wp_upload_dir();
-                    $filename = $name . ".jpg";
-                    $fileurl = "../wp-content/uploads" . $directory . $filename;
-
-                    $filetype = wp_check_filetype(basename($fileurl) , null);
-                    file_put_contents($fileurl, $data);
-                    $attachment = array(
-                            'guid' => $wp_upload_dir['url'] . '/' . basename($fileurl) ,
-                            'post_mime_type' => $filetype['type'],
-                            'post_title' => preg_replace('/\.[^.]+$/', '', basename($fileurl)) ,
-                            'post_content' => '',
-                            'post_status' => 'inherit'
-                    );
-
-                    $attach_id = wp_insert_attachment($attachment, $fileurl, $post->ID);
-                    $attach_data = wp_generate_attachment_metadata($attach_id, $fileurl);
-                    wp_update_attachment_metadata($attach_id, $attach_data);
-                    set_post_thumbnail($post->ID, $attach_id);
+                throw new \Exception('invalid image type');
             }
+
+            $name = $post->post_name;
+            $directory = "/" . date('Y') . "/" . date('m') . "/";
+            $wp_upload_dir = wp_upload_dir();
+            $filename = $name . ".jpg";
+            $fileurl = "../wp-content/uploads" . $directory . $filename;
+
+            $filetype = wp_check_filetype(basename($fileurl) , null);
+            file_put_contents($fileurl, $data);
+
+            $media = get_attached_media('image', $post->ID);
+
+            if (!$media)
+            {
+                $attachment = array(
+                    'guid' => $wp_upload_dir['url'] . '/' . basename($fileurl) ,
+                    'post_mime_type' => $filetype['type'],
+                    'post_title' => preg_replace('/\.[^.]+$/', '', basename($fileurl)) ,
+                    'post_content' => '',
+                    'post_status' => 'inherit'
+                );
+
+                $attach_id = wp_insert_attachment($attachment, $fileurl, $post->ID);
+                $attach_data = wp_generate_attachment_metadata($attach_id, $fileurl);
+                wp_update_attachment_metadata($attach_id, $attach_data);
+            }
+        }
     }
 }
 
-
 // Fixes broken Base64 images
-function bbc_base64_fixer($src) {
-	if(strpos($src, 'data:image') === false) {
-		return preg_replace('/image\//', "data:image/", $src);
-	}
-	return $src;
+function bbc_base64_fixer($src)
+{
+    if (strpos($src, 'data:image') === false)
+    {
+        return preg_replace('/image\//', "data:image/", $src);
+    }
+    return $src;
 }
-
 
 // URL Status Code Checker
 function bbc_check_url_status($url, $condition = null)
@@ -93,7 +101,7 @@ function bbc_set_image_dimension($content)
 
     // Get all images
     $pattern1 = '/<img(?:[^>])*+>/i';
-    preg_match_all($pattern1, $buffer , $first_match);
+    preg_match_all($pattern1, $buffer, $first_match);
 
     $all_images = array_merge($first_match[0]);
 
@@ -115,12 +123,14 @@ function bbc_set_image_dimension($content)
             // Get link of the file
             preg_match('/src=[\'"]([^\'"]+)/', $clean_image, $src_match);
 
-            if(!empty($src_match)) {
+            if (!empty($src_match))
+            {
                 // Compares src with banned hosts
                 $in_block_list = false;
                 $exceptions = get_option('wdss_excluded_hosts_dictionary', '');
                 // chemistryland.com, fin.gc.ca, support.revelsystems.com
-                if(!empty($exceptions) && is_array($exceptions)) {
+                if (!empty($exceptions) && is_array($exceptions))
+                {
                     foreach ($exceptions as $exception)
                     {
                         if (strpos($src_match[1], $exception) !== false)
@@ -134,8 +144,8 @@ function bbc_set_image_dimension($content)
                 if (strpos($src_match[1], 'base64') !== false)
                 {
                     $is_blob = true;
-                    $image_url = bbc_base64_fixer($src_match[1]);	
-                    $clean_blob_image = '<img src="' . $image_url . '">';	
+                    $image_url = bbc_base64_fixer($src_match[1]);
+                    $clean_blob_image = '<img src="' . $image_url . '">';
                     $binary = base64_decode(explode(',', $image_url) [1]);
                     $image_data = getimagesizefromstring($binary) ? getimagesizefromstring($binary) : false;
 
@@ -154,8 +164,8 @@ function bbc_set_image_dimension($content)
                         $buffer = str_replace($tmp, '', $buffer);
                         return $buffer;
                     }
-                    
-                    $protocol = stripos($_SERVER['SERVER_PROTOCOL'],'https') === 0 ? 'https://' : 'http://';
+
+                    $protocol = stripos($_SERVER['SERVER_PROTOCOL'], 'https') === 0 ? 'https://' : 'http://';
 
                     // If src doesn`t contains SERVER NAME then add it
                     if (strpos($src_match[1], 'wp-content') && strpos($src_match[1], $protocol) === false)
@@ -171,22 +181,23 @@ function bbc_set_image_dimension($content)
 
             }
 
-
             // Checks if width & height are defined
             if (!empty($width) && !empty($height))
             {
                 $dimension = 'width="' . $width . '" height="' . $height . '" ';
 
-				// Add width and width attribute
-				if($is_blob) {
-				    $image = str_replace('<img', '<img loading="lazy" ' . $dimension, $clean_blob_image);
-				}
-				else {
-					$image = str_replace('<img', '<img loading="lazy" ' . $dimension, $clean_image);
-				}
+                // Add width and width attribute
+                if ($is_blob)
+                {
+                    $image = str_replace('<img', '<img loading="lazy" ' . $dimension, $clean_blob_image);
+                }
+                else
+                {
+                    $image = str_replace('<img', '<img loading="lazy" ' . $dimension, $clean_image);
+                }
 
-			    // Replace image with new attributes
-			    $buffer = str_replace($tmp, $image, $buffer);
+                // Replace image with new attributes
+                $buffer = str_replace($tmp, $image, $buffer);
 
             }
             else
@@ -211,7 +222,7 @@ function bbc_regex_post_content_filters($content)
     $pattern4 = '/<noscript>.*<\/noscript><img.*?>/';
     $pattern5 = '/<figure[^>]*><\/figure[^>]*>/';
     $pattern6 = '/<p[^>]*><\/p[^>]*>/';
-    $pattern7 = '/<\/p><p>/'; 
+    $pattern7 = '/<\/p><p>/';
     $pattern8 = '/<p>(<iframe[^>]*><\/iframe[^>]*>)<\/p>/';
 
     $filtered1 = preg_replace($pattern1, "", $content);
@@ -235,8 +246,8 @@ function bbc_alt_singlepage_autocomplete($id, $content)
     $any_alt_pattern = '/alt="(.*)"/';
     $empty_alt_pattern = '/alt=["\']\s?["\']/';
     $image_pattern = '/<img[^>]+>/';
-    
-    $post_title = str_replace('"', "", $post->post_title); 
+
+    $post_title = str_replace('"', "", $post->post_title);
     $post_title = mb_strtolower($post_title);
 
     preg_match_all($image_pattern, $content, $images);
@@ -247,11 +258,13 @@ function bbc_alt_singlepage_autocomplete($id, $content)
         {
             if (!preg_match('/alt=/', $value) || function_exists('pll_current_language') && preg_match($any_alt_pattern, $value))
             {
-                if(function_exists('pll_current_language')) {
+                if (function_exists('pll_current_language'))
+                {
                     $new_img = preg_replace('/alt=".*?"/', '', $images[0][$index]);
-                    $new_img = str_replace('<img', '<img alt="' . $post_title  . '"', $new_img);
+                    $new_img = str_replace('<img', '<img alt="' . $post_title . '"', $new_img);
                 }
-                else {
+                else
+                {
                     $new_img = str_replace('<img', '<img alt="' . $post_title . '"', $images[0][$index]);
                 }
                 $content = str_replace($images[0][$index], $new_img, $content);
