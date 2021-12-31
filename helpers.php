@@ -224,6 +224,7 @@ function bbc_regex_post_content_filters($content)
     $pattern6 = '/<p[^>]*><\/p[^>]*>/';
     $pattern7 = '/<\/p><p>/';
     $pattern8 = '/<p>(<iframe[^>]*><\/iframe[^>]*>)<\/p>/';
+    $pattern9 = '/[^ -\x{2122}]\s+|\s*[^ -\x{2122}]/u';
 
     $filtered1 = preg_replace($pattern1, "", $content);
     $filtered2 = preg_replace($pattern2, '', $filtered1);
@@ -233,8 +234,9 @@ function bbc_regex_post_content_filters($content)
     $filtered6 = preg_replace($pattern6, "", $filtered5);
     $filtered7 = preg_replace($pattern6, "", $filtered6);
     $filtered8 = preg_replace($pattern8, '$1', $filtered7);
+    $filtered9 = preg_replace($pattern9, '', $filtered8);
 
-    return $filtered8;
+    return $filtered9;
 }
 
 // Adds alts for post content images
