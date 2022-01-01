@@ -1,93 +1,96 @@
-(function( $ ){
-	
-	// declaring variables at initialization
-	var $scanBtn = $('#wdbvf-scan-btn'),
-		$convertAllBtn = $('#wdbvf-convert-all-btn'),
-		$output = $('#wdbvf-output'),
-		$singleConvertLinks = $('.wdbvf-single-convert'),
-		$doactionTopBtn = $('#doaction'),
-		$doactionBottomBtn = $('#doaction2'),
-		convertQueue = [],
-		doingAjax = false;
-		
 
-	$scanBtn.click(function(e){
+function WDBVF_Init() {
+	// Declaring letiables at initialization
+	let scan_button = document.querySelector('#wdbvf-scan-btn'),
+	output = document.querySelector('#wdbvf-output'),
+	single_convert_links = Array.from(document.querySelectorAll('.wdbvf-single-convert')),
 
+	do_action_top_button = document.querySelector('#doaction'),
+	do_action_bottom_button = document.querySelector('#doaction2'),
+
+	convert_queue = [],
+	doing_ajax = false;
+
+
+	scan_button.addEventListener('click', function(e){
 		e.preventDefault();
-		$scanBtn.prop("disabled", true);
-		$convertAllBtn.hide();
+		scan_button.setAttribute("disabled", true);
 		scanPosts(0, -1);
 	});
-	
-	// scanning posts via ajax
+
+	// Scanning posts via ajax
 	function scanPosts( offset = 0, total = -1) {
 
-		if ( doingAjax ) return;
-		doingAjax = true;
-		var nonce = $scanBtn.data('nonce');
+		if ( doing_ajax ) return;
+		doing_ajax = true;
+		let nonce = scan_button.dataset.nonce;
 
-		$output.html( wdbvfObj.scanningMessage );
-		$.ajax({
+		output.innerHTML = wdbvfObj.scanningMessage;
+		jQuery.ajax({
 			method: "POST",
 			url: wdbvfObj.ajaxUrl,
 			data: { action : "wdbvf_scan_posts", offset : offset, total : total, _wpnonce : nonce }
 		})
 		.done(function( data ){
-			doingAjax = false;
+			doing_ajax = false;
 			if ( data.error ) {
-				$output.html( data.message );
+				output.innerHTML = data.message;
 				return;
 			}
 			if ( data.offset >= data.total ) {
-				$scanBtn.prop("disabled", false);
-				$output.html( data.message );
+				scan_button.setAttribute("disabled", false);
+				output.innerHTML = data.message;
 				document.location.href = document.location.href + "&wdbvf_scan_finished=1";
 				return;
 			}
 			scanPosts( data.offset, data.total);
-			$output.html( data.message );
+			output.innerHTML = data.message;
 		})
 		.fail(function(){
-			doingAjax = false;
-			$output.html( wdbvfObj.serverErrorMessage );
+			doing_ajax = false;
+			output.innerHTML = wdbvfObj.serverErrorMessage;
 		});
 	}
-	
+
 
 
 	// table "Convert" link handler
-	$singleConvertLinks.click(function(e){
-		e.preventDefault();
-		
-		var postID = $(this).data('json').post;
-		convertQueue.push( postID );
-		convertPosts();
+	single_convert_links.forEach(link => {
+		link.addEventListener('click', function(e){
+			e.preventDefault();
+			
+			let raw_data = JSON.parse(this.dataset.json);
+			let post_id = raw_data.post;
+			convert_queue.push(post_id);
+			convertPosts();
+		});
 	});
-	
+
+
 
 	// bulk posts converting via ajax
 	function bulkConvertPosts( offset = 0, total = -1){
-		if ( doingAjax ) return;
+		if ( doing_ajax ) return;
 
-		doingAjax = true;
-		var nonce = $convertAllBtn.data('nonce');
-		$output.html( wdbvfObj.bulkConvertingMessage );
-		$.ajax({
+		doing_ajax = true;
+		let nonce = convert_all_button.dataset.nonce;
+		output.innerHTML = wdbvfObj.bulkConvertingMessage;
+		jQuery.ajax({
 			method: "GET",
 			url: wdbvfObj.ajaxUrl,
 			data: { action : "wdbvf_bulk_convert", offset : offset, total : total, _wpnonce : nonce }
 		})
 		.done(function( data ){
-			doingAjax = false;
+			doing_ajax = false;
 			if ( data.error ) {
-				$output.html( data.message );
+				output.innerHTML = data.message;
 				return;
 			}
-			var convertedData = [];
-			var arrayLength = data.postsData.length;
-			for (var i = 0; i < arrayLength; i++) {
+			let convertedData = [];
+			let arrayLength = data.postsData.length;
+			for (let i = 0; i < arrayLength; i++) {
 
-				var convertedPost = {
+				let convertedPost = {
 					id		: data.postsData[i].id,
 					content	: data.postsData[i].content
 				};
@@ -98,136 +101,146 @@
 			return;
 		})
 		.fail(function(){
-			doingAjax = false;
-			$output.html( wdbvfObj.serverErrorMessage );
+			doing_ajax = false;
+			output.innerHTML = wdbvfObj.serverErrorMessage;
 		});
 	}
-	
+
 	// bulk saving converted posts via ajax
 	function bulkSaveConverted( convertedData, offset, total, message ) {
-		if ( doingAjax ) return;
-		doingAjax = true;
-		var nonce = $convertAllBtn.data('nonce');
-		var jsonData = {
+		if ( doing_ajax ) return;
+		doing_ajax = true;
+		let nonce = convert_all_button.dataset.nonce;
+		let jsonData = {
 			action : "wdbvf_bulk_convert",
 			offset : offset,
 			total : total,
 			postsData : convertedData,
 			_wpnonce : nonce
 		};
-		$.ajax({
+		jQuery.ajax({
 			method: "POST",
 			url: wdbvfObj.ajaxUrl,
 			data: jsonData
 		})
 		.done(function( data ){
-			doingAjax = false;
+			doing_ajax = false;
 			if ( data.error ) {
-				$output.html( data.message );
+				output.innerHTML = data.message;
 				return;
 			}
 			if ( data.offset >= data.total ) {
-				$convertAllBtn.prop("disabled", false);
-				$output.html( wdbvfObj.bulkConvertingSuccessMessage );
+				convert_all_button.setAttribute("disabled", false);
+				output.innerHTML = wdbvfObj.bulkConvertingSuccessMessage;
 				return;
 			}
 			bulkConvertPosts( offset, total );
-			$output.html( message );
+			output.innerHTML = message;
 
 			return;
 		})
 		.fail(function(){
-			doingAjax = false;
-			$output.html( wdbvfObj.serverErrorMessage );
+			doing_ajax = false;
+			output.innerHTML = wdbvfObj.serverErrorMessage;
 		});
 	}
+
 	
-	// single or group posts converting via ajax
-	function convertPosts(){
-		if( convertQueue.length == 0 ){
-			$doactionTopBtn.prop("disabled", false);
-			$doactionBottomBtn.prop("disabled", false);
+	// Single or group posts converting via ajax
+	function convertPosts() {
+		if( convert_queue.length == 0 ){
+			do_action_top_button.removeAttribute("disabled");
+			do_action_bottom_button.removeAttribute("disabled");
 			return;
 		}
-		if ( doingAjax ) return;
-		doingAjax = true;
-		var postID = convertQueue.shift();
-		var $linkObject = $('#wdbvf-single-convert-' + postID);
-		$linkObject.hide().after( wdbvfObj.convertingSingleMessage );
-		$.ajax({
-			method: "GET",
-			url: wdbvfObj.ajaxUrl,
-			data: $linkObject.data('json')
-		})
-		.done(function( data ) {
-			doingAjax = false;
-			if ( data.error ) {
+		if ( doing_ajax ) return;
+		doing_ajax = true;
+		let postID = convert_queue.shift();
+
+		let linkObject = jQuery('#wdbvf-single-convert-' + postID);
+		let proceededRow = linkObject.closest('tr');
+
+		if(linkObject){ 
+			linkObject.html(wdbvfObj.convertingSingleMessage);
+			jQuery.ajax({
+				method: "GET",
+				url: wdbvfObj.ajaxUrl,
+				data: linkObject.data('json')
+			})
+			.done(function( data ) {
+				doing_ajax = false;
+				if ( data.error ) {
+					return;
+				}
+				saveConverted( data.message, linkObject, proceededRow );
 				return;
-			}
-			saveConverted( data.message, $linkObject );
-			return;
-		})
-		.fail(function(){
-			doingAjax = false;
-			
-		});
+			})
+			.fail(function(){
+				doing_ajax = false;
+				
+			});
+		}
 	}
-	
-	
-	// single or group saving of converted posts via ajax
-	function saveConverted( content, $linkObject ){
-		if ( doingAjax ) return;
-		doingAjax = true;
-		var jsonData = $linkObject.data('json');
+
+
+	// Single or group saving of converted posts via ajax
+	function saveConverted( content, linkObject, proceededRow ){
+		if ( doing_ajax ) return;
+		doing_ajax = true;
+		let jsonData = linkObject.data('json');
 		jsonData.content = content;
-		$.ajax({
+		jQuery.ajax({
 			method: "POST",
 			url: wdbvfObj.ajaxUrl,
 			data: jsonData
 		})
 		.done(function( data ){
-			doingAjax = false;
+			doing_ajax = false;
 			return;
 		})
 		.fail(function(){
-			doingAjax = false;
+			doing_ajax = false;
 			console.log('An error occured');
 		}).
 		always(function(){
-			$("#wdbvf-convert-checkbox-"+jsonData.post).prop("checked", false);
-			$("#wdbvf-convert-checkbox-"+jsonData.post).prop("disabled", true);
-			$linkObject.parent().html( wdbvfObj.convertedSingleMessage );
+			document.querySelector("#wdbvf-convert-checkbox-"+jsonData.post).setAttribute("checked", false);
+			document.querySelector("#wdbvf-convert-checkbox-"+jsonData.post).setAttribute("disabled", true);
+			linkObject.html(wdbvfObj.convertedSingleMessage);			
+			proceededRow.addClass('proceeded');
 			convertPosts();
 		});
 	}
-	
+
 	// top action button handler
-	$doactionTopBtn.click(function(e){
+	do_action_top_button.addEventListener('click', function(e){
 		e.preventDefault();
-		if( $('select[name="action"]').val() === 'bulk-convert' ){
+		if( document.querySelector('select[name="action"]').value === 'bulk-convert' ){
 			convertChecked();
 		}
 	});
-	
+
 	// bottom action button handler
-	$doactionBottomBtn.click(function(e){
+	do_action_bottom_button.addEventListener('click', function(e){
 		e.preventDefault();
-		if( $('select[name="action2"]').val() === 'bulk-convert' ){
+		if( document.querySelector('select[name="action2"]').value === 'bulk-convert' ){
 			convertChecked();
 		}
 	});
-	
+
 	// add checked posts to converting queue and run converting process
-	function convertChecked(){
-		$('input[name="bulk-convert[]"]').each(function( index ){
-			if( $(this).prop("checked") == true ){
-				convertQueue.push( $(this).val() );
+	function convertChecked() {
+		let all_checked = Array.from(document.querySelectorAll('input[name="bulk-convert[]"]'));
+		
+		all_checked.forEach(element => {
+			if(element.checked && !element.hasAttribute('disabled') ){
+				convert_queue.push(element.value);
 			}
 		});
-		$doactionTopBtn.prop("disabled", true);
-		$doactionBottomBtn.prop("disabled", true);
+
 		convertPosts();
+		do_action_top_button.setAttribute("disabled", true);
+		do_action_bottom_button.setAttribute("disabled", true);
 	}
-
-
-})( jQuery );
+}
+document.addEventListener('DOMContentLoaded', WDBVF_Init);
+	

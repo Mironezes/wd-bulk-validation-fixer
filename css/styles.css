@@ -14,3 +14,6 @@
   font-weight: 500;
   margin-right: 25px;
 }
+#wdbvf-wrapper #the-list tr.proceeded a {
+  color: #ccc;
+}

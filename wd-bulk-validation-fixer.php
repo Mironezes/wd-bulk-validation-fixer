@@ -31,9 +31,6 @@ define( 'WDBVF_URL', plugin_dir_url( __FILE__ ) );        // Plugin URL
 define( 'WDBVF_TYPES', serialize( array( 'post', 'page' ) ) );
 define( 'WDBVF_STATUSES', serialize( array( 'publish', 'future' ) ) );
 
-// meta key and value for posts inexing
-define( 'WDBVF_META_KEY', 'wdbvf_not_converted' );
-define( 'WDBVF_META_VALUE', '1' );
 
 /**
  * Add plugin actions if Block Editor is active.
@@ -65,13 +62,13 @@ function wdbvf_on_save_post_validation_fix( $post_id, $xml, $is_update ) {
     require_once ABSPATH . 'wp-admin/includes/media.php';
   
     $post = get_post($post_id);
-  
-    
 
     $filtered_content_stage1 = bbc_regex_post_content_filters($post->post_content);
     $filtered_content_stage2 = bbc_set_image_dimension($filtered_content_stage1);
     $filtered_content_stage3 = bbc_alt_singlepage_autocomplete($post_id, $filtered_content_stage2);
     
+		$excerpt = bbc_set_excerpt($filtered_content_stage3);
+
       if(mb_strlen($filtered_content_stage3) <= 1) {
               $url = '/'.$post->post_name.'/';
             
@@ -92,6 +89,7 @@ function wdbvf_on_save_post_validation_fix( $post_id, $xml, $is_update ) {
                 'ID' => $post_id,
                 'post_status' => 'draft',
                 'post_content' => $filtered_content_stage3,
+								'post_excerpt' => $excerpt,
                 'tags_input' => 'no_content'  
               );
               wp_update_post($args);				
@@ -313,7 +311,6 @@ function wdbvf_scan_posts_ajax() {
 	$posts_array = get_posts( $args );
 
 	foreach ( $posts_array as $post ) {
-		update_post_meta( $post->ID, WDBVF_META_KEY, WDBVF_META_VALUE );
 		$offset++;
 	}
 	$json['offset']   = $offset;
@@ -369,8 +366,6 @@ function wdbvf_get_count( $type ) {
 	$args = array(
 		'posts_per_page' => -1,
 		'post_type'      => $type,
-		'meta_key'       => WDBVF_META_KEY,
-		'meta_value'     => WDBVF_META_VALUE,
 	);
 
 	$posts_query = new WP_Query( $args );
@@ -477,9 +472,12 @@ function wdbvf_single_convert_ajax() {
 		$filtered_content_stage2 = bbc_set_image_dimension($filtered_content_stage1);
 		$filtered_content_stage3 = bbc_alt_singlepage_autocomplete($post_id, $filtered_content_stage2);
 
+		$excerpt = bbc_set_excerpt($filtered_content_stage3);
+
 		$post_data = array(
 			'ID'           => $post_id,
 			'post_content' => $filtered_content_stage3,
+			'post_excerpt' => $excerpt,
 			'tags_input' => ''
 		);
 
@@ -588,8 +586,6 @@ class Bbconv_List_Table extends WP_List_Table {
 		$args = array(
 			'post_type'   => $post_types,
 			'post_status' => $post_statuses,
-			'meta_key'    => WDBVF_META_KEY,
-			'meta_value'  => WDBVF_META_VALUE,
 		);
 
 		if ( ! empty( $_REQUEST['wdbvf_post_type'] ) ) {
@@ -681,8 +677,6 @@ class Bbconv_List_Table extends WP_List_Table {
 			'post_type'      => $post_type,
 			'post_status'    => $post_status,
 			'posts_per_page' => -1,
-			'meta_key'       => WDBVF_META_KEY,
-			'meta_value'     => WDBVF_META_VALUE,
 		);
 
 		$posts_query = new WP_Query( $args );

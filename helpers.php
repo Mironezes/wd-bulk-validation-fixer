@@ -1,5 +1,27 @@
 <?php
 
+
+function bbc_set_excerpt($content) {
+    $excerpt = '';
+
+    if (preg_match('/<div[^>]*id="toc"[^>]*>.*?<\/div>/', $content))
+    {
+        $filtered_content = strip_tags(preg_replace('#<div[^>]*id="toc"[^>]*>.*?</div>#is', '', $content));
+    }
+    elseif (preg_match('/<p[^>]*[^>]*>.*?<\/p>/', $content))
+    {
+        $excerpt_raw = preg_match_all('/<p[^>]*[^>]*>.*?<\/p>/', $content, $results);
+        if (!empty($results[0][1]))
+        {
+            $filtered_content = strip_tags($results[0][1]);
+        }
+    }
+
+    $excerpt = mb_substr(strip_tags($filtered_content), 0, 250) . '...';
+    return $excerpt;
+}
+
+
 // Get first image and attach it to post
 function bbc_attach_first_image($post, $content)
 {
