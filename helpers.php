@@ -1,6 +1,6 @@
 <?php
 
-
+// Set an excerpt to post
 function bbc_set_excerpt($content) {
     $excerpt = '';
 

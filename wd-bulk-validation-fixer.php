@@ -6,9 +6,12 @@
  * GitHub Plugin URI: https://github.com/Mironezes/wd-bulk-validation-fixer
  * Primary Branch: realise
  * Description: Fixes all known validaiton issues on WD satellites posts.
- * Version: 0.9.5
+ * Version: 0.10
  * Author: Alexey Suprun
  * Author URI: https://github.com/mironezes
+ * Requires at least: 5.5
+ * Requires PHP: 7.0
+ * Tested up to: 5.8.2
  * License: GPL-2.0+
  * License URI: http://www.gnu.org/licenses/gpl-2.0.txt
  * Text Domain: wdbvf
@@ -21,7 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 require_once('helpers.php');
 
-define( 'WDBVF_VERSION', '0.9.5' );   
+define( 'WDBVF_VERSION', '0.10' );   
 define( 'WDBVF_DOMAIN', 'wdbvf' );                   // Text Domain
 define( 'WDBVF_SLUG', 'wd-bulk-validation-fixer' );      // Plugin slug
 define( 'WDBVF_FOLDER', plugin_dir_path( __FILE__ ) );    // Plugin folder
