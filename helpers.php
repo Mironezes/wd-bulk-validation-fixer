@@ -1,5 +1,24 @@
 <?php
 
+// Fixes h1-h6 heading issues
+function bbc_fix_headings($content) {
+	$pattern = '/<h\d>(.*?)<\/h\d>/';
+
+	preg_match_all($pattern, $content, $results);
+	if(!empty($results)) {
+
+		if(mb_strpos($results[0][0], 'h2') == false) {
+			$h2 = preg_replace($pattern, '<h2>$1</h2>', $results[0][0]);
+			
+			$old_tag = preg_replace('/\//', '\/', $results[0][0]);
+			$old_tag = preg_replace('/\?/', '\?', $old_tag);
+			$content = preg_replace('/'.$old_tag . '/', $h2, $content);
+		}	
+	}
+    return $content;
+}
+
+
 // Set an excerpt to post
 function bbc_set_excerpt($content) {
     $excerpt = '';
@@ -247,6 +266,8 @@ function bbc_regex_post_content_filters($content)
     $pattern7 = '/<\/p><p>/';
     $pattern8 = '/<p>(<iframe[^>]*><\/iframe[^>]*>)<\/p>/';
     $pattern9 = '/[^ -\x{2122}]\s+|\s*[^ -\x{2122}]/u';
+    $pattern10 = '/<\/p><\/p>/';
+    $pattern11 = '/(<\/h2>)<\/p>/';
 
     $filtered1 = preg_replace($pattern1, "", $content);
     $filtered2 = preg_replace($pattern2, '', $filtered1);
@@ -257,8 +278,10 @@ function bbc_regex_post_content_filters($content)
     $filtered7 = preg_replace($pattern6, "", $filtered6);
     $filtered8 = preg_replace($pattern8, '$1', $filtered7);
     $filtered9 = preg_replace($pattern9, '', $filtered8);
+    $filtered10 = preg_replace($pattern10, '', $filtered9);
+    $filtered11 = preg_replace($pattern11, '$1', $filtered10);
 
-    return $filtered9;
+    return $filtered11;
 }
 
 // Adds alts for post content images

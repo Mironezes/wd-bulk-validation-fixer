@@ -1,6 +1,6 @@
 === Bulk Block Converter ===
 Tags: bulk, import, editor, posts, content, validation, fix
-Stable tag: 0.10
+Stable tag: 0.11
 Requires at least: 5.5
 Tested up to: 5.8.2
 License: GPLv2 or later
