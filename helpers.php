@@ -30,9 +30,9 @@ function bbc_set_excerpt($content) {
     elseif (preg_match('/<p[^>]*[^>]*>.*?<\/p>/', $content))
     {
         $excerpt_raw = preg_match_all('/<p[^>]*[^>]*>.*?<\/p>/', $content, $results);
-        if (!empty($results[0][1]))
+        if (!empty($results[0][0]))
         {
-            $filtered_content = strip_tags($results[0][1]);
+            $filtered_content = strip_tags($results[0][0]);
         }
     }
 
