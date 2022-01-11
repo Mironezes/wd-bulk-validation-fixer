@@ -36,7 +36,9 @@ function bbc_set_excerpt($content) {
         }
     }
 
-    $excerpt = mb_substr(strip_tags($filtered_content), 0, 250) . '...';
+    if(!empty($filtered_content)) {
+        $excerpt = mb_substr(strip_tags($filtered_content), 0, 250) . '...';
+    }
     return $excerpt;
 }
 
