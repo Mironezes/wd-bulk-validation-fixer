@@ -27,9 +27,11 @@ function bbc_set_excerpt($content) {
     {
         $filtered_content = strip_tags(preg_replace('#<div[^>]*id="toc"[^>]*>.*?</div>#is', '', $content));
     }
-    elseif (preg_match('/<p[^>]*[^>]*>.*?<\/p>/', $content))
+
+    
+    elseif (preg_match('/<p>(.*?)<\/p>/', $content))
     {
-        $excerpt_raw = preg_match_all('/<p[^>]*[^>]*>.*?<\/p>/', $content, $results);
+        $excerpt_raw = preg_match_all('/<p>(.*?)<\/p>/', $content, $results);
         if (!empty($results[0][0]))
         {
             $filtered_content = strip_tags($results[0][0]);
