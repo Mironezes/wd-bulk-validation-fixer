@@ -53,7 +53,12 @@ function bbc_attach_first_image($post, $content)
     preg_match($pattern1, $content, $first_image);
     preg_match('/src=[\'"]([^\'"]+)/', $first_image[0], $src_match);
 
-    if (!empty($src_match))
+
+    $binary = base64_decode(explode(',', $src_match[1]) [1]);
+    $image_data = getimagesizefromstring($binary) ?: false;
+    
+
+    if (!empty($src_match) && $image_data[1] > 100)
     {
 
         if (preg_match('/^data:image\/(\w+);base64,/', $src_match[1], $type))
