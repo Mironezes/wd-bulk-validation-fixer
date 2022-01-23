@@ -272,11 +272,16 @@ function bbc_regex_post_content_filters($content)
     $pattern4 = '/<noscript>.*<\/noscript><img.*?>/';
     $pattern5 = '/<figure[^>]*><\/figure[^>]*>/';
     $pattern6 = '/<p[^>]*><\/p[^>]*>/';
-    $pattern7 = '/<\/p><p>/';
+    $pattern7 = '/<\/p>\s?<p>/';
     $pattern8 = '/<p>(<iframe[^>]*><\/iframe[^>]*>)<\/p>/';
     $pattern9 = '/[^ -\x{2122}]\s+|\s*[^ -\x{2122}]/u';
-    $pattern10 = '/<\/p><\/p>/';
-    $pattern11 = '/(<\/h2>)<\/p>/';
+
+    
+    $pattern10 = '/<\/p>\s?<\/p>/';
+    $pattern11 = '/<p>\s?<\/p>/';
+    $pattern12 = '/(<\/h2>)<\/p>/';
+	$pattern13 = '/(<\/?strong>)/';
+	$pattern14 = '/<p>([\w|\s|\n]*?)<\/h2>/';
 
     $filtered1 = preg_replace($pattern1, "", $content);
     $filtered2 = preg_replace($pattern2, '', $filtered1);
@@ -287,10 +292,15 @@ function bbc_regex_post_content_filters($content)
     $filtered7 = preg_replace($pattern6, "", $filtered6);
     $filtered8 = preg_replace($pattern8, '$1', $filtered7);
     $filtered9 = preg_replace($pattern9, '', $filtered8);
-    $filtered10 = preg_replace($pattern10, '', $filtered9);
-    $filtered11 = preg_replace($pattern11, '$1', $filtered10);
 
-    return $filtered11;
+    $filtered10 = preg_replace($pattern10, '', $filtered9);
+    $filtered11 = preg_replace($pattern11, '', $filtered10);
+
+    $filtered12 = preg_replace($pattern12, '$1', $filtered11);
+    $filtered13 = preg_replace($pattern13, '', $filtered12);
+    $filtered14 = preg_replace($pattern14, '<h2>$1</h2>', $filtered13);
+
+    return $filtered14;
 }
 
 // Adds alts for post content images
