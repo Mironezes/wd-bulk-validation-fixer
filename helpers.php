@@ -171,23 +171,26 @@ function bbc_set_image_dimension($content = null, $post = null)
                     }
                 }
 
-                
                 $attachments = get_attached_media('image', $post->ID);
                 $attach_webp_id = array_key_last($attachments);
                 $attach_jpg_id = $attach_webp_id - 1;
 
                 $src_jpg = wp_get_attachment_url($attach_jpg_id);
                 $src_webp = wp_get_attachment_url($attach_webp_id);
-                $width = $image_data[0];
-                $height = $image_data[1];
+                $width = $image_data[0] ?: 300;
+                $height = $image_data[1] ?: 300;
 
-                $image = "
-                <picture>
-                <source srcset='${src_webp}' type='image/webp'>
-                <img loading='lazy' src='${src_jpg}' width='${width}' height='${height}'>
-                </picture>";
-                $buffer = str_replace($tmp, $image, $buffer);
-
+                if($src_jpg && $src_webp) {
+                    $image = "
+                    <picture>
+                    <source srcset='${src_webp}' type='image/webp'>
+                    <img loading='lazy' src='${src_jpg}' width='${width}' height='${height}'>
+                    </picture>";
+                    $buffer = str_replace($tmp, $image, $buffer);
+                }
+                else {
+                    $buffer = str_replace($tmp, '', $buffer);
+                }
             }
         }
         elseif (!bbc_check_url_status($src_match[1]))
