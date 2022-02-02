@@ -45,7 +45,7 @@
               if($attach_jpg_id) {
                 $attach_url = wp_get_attachment_image_url($attach_id, 'medium');
                 $jpg = imagecreatefromjpeg($attach_url);
-                $webp = imagewebp($jpg, $filedir, 80);
+                $webp = imagewebp($jpg, $filedir, 100);
 
                 $attach_id = wp_insert_attachment($attachment, $filedir, $post->ID);
                 $attach_data = wp_generate_attachment_metadata($attach_id, $filedir);
