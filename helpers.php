@@ -166,7 +166,8 @@ function bbc_set_image_dimension($content = null, $post = null)
                     // If image src returns 200 status then get image size
                     if (bbc_check_url_status($src_match[1]))
                     {
-                        list($width, $height) = getimagesize($src_match[1]);
+                        $image_data = getimagesize($src_match[1]);
+                        bbc_upload_image($post, $src_match, $image_data);
                     }
                 }
 

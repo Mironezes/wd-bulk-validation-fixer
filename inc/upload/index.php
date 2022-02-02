@@ -15,6 +15,9 @@ function bbc_upload_image($post = null, $src = null, $dimensions = null)
                 throw new \Exception('invalid image type');
             }
         }
+        else {
+            $data = file_get_contents($src[1]);
+        }
 
         bbc_upload_loop($post, $data);
     }
