@@ -1,5 +1,8 @@
 <?php
 
+require_once(__DIR__. '/inc/upload.php');
+
+
 // Fixes h1-h6 heading issues
 function bbc_fix_headings($content) {
 	$pattern = '/<h\d>(.*?)<\/h\d>/';
@@ -53,48 +56,15 @@ function bbc_attach_first_image($post, $content)
     preg_match($pattern1, $content, $first_image);
     preg_match('/src=[\'"]([^\'"]+)/', $first_image[0], $src_match);
 
-
-    $binary = base64_decode(explode(',', $src_match[1]) [1]);
-    $image_data = getimagesizefromstring($binary) ?: false;
-    
-
-    if (!empty($src_match) && $image_data[1] > 100)
-    {
-
-        if (preg_match('/^data:image\/(\w+);base64,/', $src_match[1], $type))
-        {
-            $data = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $src_match[1]));
-            $type = strtolower($type[1]); // jpg, png, gif
-            if (!in_array($type, ['jpg', 'jpeg', 'gif', 'png']))
-            {
-                throw new \Exception('invalid image type');
-            }
-
-            $name = $post->post_name;
-            $directory = "/" . date('Y') . "/" . date('m') . "/";
-            $wp_upload_dir = wp_upload_dir();
-            $filename = $name . ".jpg";
-            $fileurl = "../wp-content/uploads" . $directory . $filename;
-
-            $filetype = wp_check_filetype(basename($fileurl) , null);
-            file_put_contents($fileurl, $data);
-
-            $media = get_attached_media('image', $post->ID);
-
-            if (!$media)
-            {
-                $attachment = array(
-                    'guid' => $wp_upload_dir['url'] . '/' . basename($fileurl) ,
-                    'post_mime_type' => $filetype['type'],
-                    'post_title' => preg_replace('/\.[^.]+$/', '', basename($fileurl)) ,
-                    'post_content' => '',
-                    'post_status' => 'inherit'
-                );
-
-                $attach_id = wp_insert_attachment($attachment, $fileurl, $post->ID);
-                $attach_data = wp_generate_attachment_metadata($attach_id, $fileurl);
-                wp_update_attachment_metadata($attach_id, $attach_data);
-            }
+    if(preg_match('/^data:image\/(\w+);base64,/', $src_match[1]) !== false) {
+        $binary = base64_decode(explode(',', $src_match[1]) [1]);
+        $image_data = getimagesizefromstring($binary) ?: false;
+        bbc_upload_image($post, $src_match, $image_data);
+    }
+    elseif(preg_match('/http/', $src_match[1]) !== false) {
+        if (bbc_check_url_status($src_match[1])) {
+            $image_data = getimagesize($src_match[1]);
+            bbc_upload_image($post, $src_match, $image_data);       
         }
     }
 }
@@ -271,17 +241,16 @@ function bbc_regex_post_content_filters($content)
     $pattern3 = '/<div[^>]*>|<\/div>/';
     $pattern4 = '/<noscript>.*<\/noscript><img.*?>/';
     $pattern5 = '/<figure[^>]*><\/figure[^>]*>/';
-    $pattern6 = '/<p[^>]*><\/p[^>]*>/';
+    $pattern6 = '/<\w{1,4}>\s?<\/\w{1,4}>/';
     $pattern7 = '/<\/p>\s?<p>/';
     $pattern8 = '/<p>(<iframe[^>]*><\/iframe[^>]*>)<\/p>/';
     $pattern9 = '/[^ -\x{2122}]\s+|\s*[^ -\x{2122}]/u';
 
     
     $pattern10 = '/<\/p>\s?<\/p>/';
-    $pattern11 = '/<p>\s?<\/p>/';
-    $pattern12 = '/(<\/h2>)<\/p>/';
-	$pattern13 = '/(<\/?strong>)/';
-	$pattern14 = '/<p>([\w|\s|\n]*?)<\/h2>/';
+    $pattern11 = '/(<\/h2>)<\/p>/';
+	$pattern12 = '/(<\/?strong>)/';
+	$pattern13 = '/<p>([\w|\s|\n]*?)<\/h2>/';
 
     $filtered1 = preg_replace($pattern1, "", $content);
     $filtered2 = preg_replace($pattern2, '', $filtered1);
@@ -294,13 +263,11 @@ function bbc_regex_post_content_filters($content)
     $filtered9 = preg_replace($pattern9, '', $filtered8);
 
     $filtered10 = preg_replace($pattern10, '', $filtered9);
-    $filtered11 = preg_replace($pattern11, '', $filtered10);
+    $filtered11 = preg_replace($pattern11, '$1', $filtered10);
+    $filtered12 = preg_replace($pattern12, '', $filtered11);
+    $filtered13 = preg_replace($pattern13, '<h2>$1</h2>', $filtered12);
 
-    $filtered12 = preg_replace($pattern12, '$1', $filtered11);
-    $filtered13 = preg_replace($pattern13, '', $filtered12);
-    $filtered14 = preg_replace($pattern14, '<h2>$1</h2>', $filtered13);
-
-    return $filtered14;
+    return $filtered13;
 }
 
 // Adds alts for post content images
