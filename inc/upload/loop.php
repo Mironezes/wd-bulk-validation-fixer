@@ -3,13 +3,15 @@
     function bbc_upload_loop($post, $data) {
       $output_formats = ['jpg', 'webp'];
 
+      $hash = bin2hex(random_bytes(2));
+
       foreach($output_formats as $format) {
         $name = $post->post_name;
         
         $directory = "/" . date('Y') . "/" . date('m') . "/";
         $wp_upload_dir = wp_upload_dir();
 
-        $filename = $name . '-' .  bin2hex(random_bytes(2)) .  ".$format";
+        $filename = $name . '-' . $hash  .  ".$format";
         
         $fileurl_rel =  "../wp-content/uploads" . $directory . $filename;
         $filedir = $wp_upload_dir['basedir'] . $directory . $filename;
