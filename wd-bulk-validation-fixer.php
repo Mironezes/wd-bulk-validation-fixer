@@ -67,7 +67,7 @@ function wdbvf_on_save_post_validation_fix( $post_id, $xml, $is_update ) {
     $post = get_post($post_id);
 
     $filtered_content_stage1 = bbc_regex_post_content_filters($post->post_content);
-    $filtered_content_stage2 = bbc_set_image_dimension($filtered_content_stage1);
+    $filtered_content_stage2 = bbc_set_image_dimension($filtered_content_stage1, $post);
     $filtered_content_stage3 = bbc_alt_singlepage_autocomplete($post_id, $filtered_content_stage2);
     $filtered_content_stage4 = bbc_fix_headings($filtered_content_stage3);
 
@@ -473,7 +473,7 @@ function wdbvf_single_convert_ajax() {
 		$url = '/'.$post->post_name.'/';
 
 		$filtered_content_stage1 = bbc_regex_post_content_filters($_POST['content']);
-		$filtered_content_stage2 = bbc_set_image_dimension($filtered_content_stage1);
+		$filtered_content_stage2 = bbc_set_image_dimension($filtered_content_stage1, $post);
 		$filtered_content_stage3 = bbc_alt_singlepage_autocomplete($post_id, $filtered_content_stage2);
     $filtered_content_stage4 = bbc_fix_headings($filtered_content_stage3);
 

@@ -1,6 +1,6 @@
 <?php
 
-require_once(__DIR__. '/inc/upload.php');
+require_once(__DIR__. '/inc/upload/index.php');
 
 
 // Fixes h1-h6 heading issues
@@ -114,7 +114,7 @@ function bbc_check_url_status($url, $condition = null)
 }
 
 // Auto width/height attributes
-function bbc_set_image_dimension($content)
+function bbc_set_image_dimension($content = null, $post = null)
 {
 
     $buffer = stripslashes($content);
@@ -127,7 +127,6 @@ function bbc_set_image_dimension($content)
 
     foreach ($all_images as $image)
     {
-
         $tmp = $image;
         // Removing existing width/height attributes
         $clean_image = preg_replace('/\swidth="(\d*(px%)?)"(\sheight="(\w+)")?/', '', $tmp);
@@ -138,53 +137,25 @@ function bbc_set_image_dimension($content)
 
             // Blob-case variables
             $is_blob = false;
-            $clean_blob_image;
 
             // Get link of the file
             preg_match('/src=[\'"]([^\'"]+)/', $clean_image, $src_match);
 
             if (!empty($src_match))
             {
-                // Compares src with banned hosts
-                $in_block_list = false;
-                $exceptions = get_option('wdss_excluded_hosts_dictionary', '');
-                // chemistryland.com, fin.gc.ca, support.revelsystems.com
-                if (!empty($exceptions) && is_array($exceptions))
-                {
-                    foreach ($exceptions as $exception)
-                    {
-                        if (strpos($src_match[1], $exception) !== false)
-                        {
-                            $in_block_list = true;
-                        }
-                    }
-                }
-
                 // If image is BLOB encoded
                 if (strpos($src_match[1], 'base64') !== false)
                 {
                     $is_blob = true;
                     $image_url = bbc_base64_fixer($src_match[1]);
-                    $clean_blob_image = '<img src="' . $image_url . '">';
                     $binary = base64_decode(explode(',', $image_url) [1]);
-                    $image_data = getimagesizefromstring($binary) ? getimagesizefromstring($binary) : false;
+                    $image_data = getimagesizefromstring($binary) ?: false;
 
-                    if ($image_data)
-                    {
-                        $width = $image_data[0];
-                        $height = $image_data[1];
-                    }
+                    bbc_upload_image($post, $src_match, $image_data);
                 }
                 // Regular src case
                 else
                 {
-                    // If image`s host in block list then remove it
-                    if ($in_block_list)
-                    {
-                        $buffer = str_replace($tmp, '', $buffer);
-                        return $buffer;
-                    }
-
                     $protocol = stripos($_SERVER['SERVER_PROTOCOL'], 'https') === 0 ? 'https://' : 'http://';
 
                     // If src doesn`t contains SERVER NAME then add it
