@@ -199,7 +199,7 @@ function bbc_upload_images($content = null, $post = null)
     }
 
     // Inserts </p>{}<p> template around picture for better view
-    $pattern = '/(?<![<div>|<p>])(<picture>.*?<\/picture>)(?!<\/[div|p]>)/';
+    $pattern = '/(?<=\.|\n)(<picture>.*?<\/picture>)(?=\w|\s+|\n+)/';
     if(preg_match($pattern, $buffer)) {
         $buffer = preg_replace($pattern, "</p>$1<p>", $buffer);
     }

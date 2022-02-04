@@ -6,7 +6,7 @@
  * GitHub Plugin URI: https://github.com/Mironezes/wd-bulk-validation-fixer
  * Primary Branch: realise
  * Description: Fixes all known validaiton issues on WD satellites posts.
- * Version: 0.15
+ * Version: 0.15.1
  * Author: Alexey Suprun
  * Author URI: https://github.com/mironezes
  * Requires at least: 5.5
