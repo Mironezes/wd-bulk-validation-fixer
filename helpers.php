@@ -182,11 +182,7 @@ function bbc_upload_images($content = null, $post = null)
                     $height = $image_data[1];
 
                     if($src_jpg && $src_webp && $width && $height) {
-                        $image = "
-                        <picture>
-                        <source srcset='${src_webp}' type='image/webp'>
-                        <img loading='lazy' src='${src_jpg}' width='${width}' height='${height}'>
-                        </picture>";
+                        $image = "<picture><source srcset='${src_webp}' type='image/webp'><img loading='lazy' src='${src_jpg}' width='${width}' height='${height}'></picture>";
                         $buffer = str_replace($tmp, $image, $buffer);
                         update_post_meta($post->ID, 'hasConvertedImages', '1');
                     }
@@ -201,15 +197,13 @@ function bbc_upload_images($content = null, $post = null)
             }
         }
     }
+
+    // Inserts </p>{}<p> template around picture for better view
+    $pattern = '/(?<![<div>|<p>])(<picture>.*?<\/picture>)(?!<\/[div|p]>)/';
+    if(preg_match($pattern, $buffer)) {
+        $buffer = preg_replace($pattern, "</p>$1<p>", $buffer);
+    }
     return $buffer;
-}
-
-
-// Filter content after attach
-function bbc_after_upload_images($content) {
-    $pattern = '/(<picture>.*?\n*?\s*?<\/picture>)/';
-    $filtered = preg_replace($pattern, "</p>$1<p>", $content);
-    return $filtered;
 }
 
 

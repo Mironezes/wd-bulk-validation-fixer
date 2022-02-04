@@ -398,15 +398,14 @@ function wdbvf_single_convert_ajax() {
 
     $filtered_content_stage1 = bbc_regex_post_content_filters($_POST['content']);
     $filtered_content_stage2 = bbc_upload_images($filtered_content_stage1, $post);
-		$filtered_content_stage3 = bbc_after_upload_images($filtered_content_stage2);
-    $filtered_content_stage4 = bbc_alt_singlepage_autocomplete($filtered_content_stage3, $post);
-    $filtered_content_stage5 = bbc_fix_headings($filtered_content_stage4);
+    $filtered_content_stage3 = bbc_alt_singlepage_autocomplete($filtered_content_stage2, $post);
+    $filtered_content_stage4 = bbc_fix_headings($filtered_content_stage3);
 
-		$excerpt = bbc_set_excerpt($filtered_content_stage5);
+		$excerpt = bbc_set_excerpt($filtered_content_stage4);
 
 		$post_data = array(
 			'ID'           => $post_id,
-			'post_content' => $filtered_content_stage5,
+			'post_content' => $filtered_content_stage4,
 			'post_excerpt' => $excerpt,
 			'tags_input' => ''
 		);
