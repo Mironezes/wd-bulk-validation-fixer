@@ -206,7 +206,7 @@ function bbc_upload_images($content = null, $post = null)
 
 
 // Filter content after attach
-function bbc_after_pload_images($content) {
+function bbc_after_upload_images($content) {
     $pattern = '/(<picture>.*?\n*?\s*?<\/picture>)/';
     $filtered = preg_replace($pattern, "</p>$1<p>", $content);
     return $filtered;
