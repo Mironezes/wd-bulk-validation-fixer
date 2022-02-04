@@ -2,9 +2,10 @@
 require_once(__DIR__ . '/loop.php');
 
 // Image Upload Handler 
-function bbc_upload_image($post = null, $src = null, $dimensions = null)
+function bbc_upload_image($post = null, $src = null)
 {
-    if (!empty($src) && $dimensions[1] > 100)
+    // Check if there`s valid src and then runs convertation/attach logic
+    if (!empty($src))
     {
         if (preg_match('/^data:image\/(\w+);base64,/', $src[1], $type))
         {
@@ -19,6 +20,15 @@ function bbc_upload_image($post = null, $src = null, $dimensions = null)
             $data = file_get_contents($src[1]);
         }
 
+        // Removes all existing image attachments
+        $attachments_existing = get_attached_media('image', $post->ID);
+        delete_post_thumbnail($post->ID);
+        foreach($attachments_existing as $attachment) {
+            wp_delete_attachment($attachment->ID, true);
+            usleep(500);
+        }
+
+        // Runs convertation/attach
         bbc_upload_loop($post, $data);
     }
 }

@@ -49,22 +49,14 @@ function bbc_set_excerpt($content) {
 
 
 // Get first image and attach it to post
-function bbc_attach_first_image($post, $content)
+function bbc_attach_first_image($post)
 {
-
-    $pattern1 = '/<img(?:[^>])*+>/i';
-    preg_match($pattern1, $content, $first_image);
-    preg_match('/src=[\'"]([^\'"]+)/', $first_image[0], $src_match);
-
-    if(preg_match('/^data:image\/(\w+);base64,/', $src_match[1]) !== false) {
-        $binary = base64_decode(explode(',', $src_match[1]) [1]);
-        $image_data = getimagesizefromstring($binary) ?: false;
-        bbc_upload_image($post, $src_match, $image_data);
-    }
-    elseif(preg_match('/http/', $src_match[1]) !== false) {
-        if (bbc_check_url_status($src_match[1])) {
-            $image_data = getimagesize($src_match[1]);
-            bbc_upload_image($post, $src_match, $image_data);       
+    $attachments = get_attached_media('image', $post->ID);
+    foreach($attachments as $attachment) {
+        $meta_data = wp_get_attachment_metadata($attachment->ID);
+        if($meta_data['height'] > 100) {
+          set_post_thumbnail($post, $attachment->ID);
+          return;
         }
     }
 }
@@ -113,93 +105,113 @@ function bbc_check_url_status($url, $condition = null)
     }
 }
 
-// Auto width/height attributes
-function bbc_set_image_dimension($content = null, $post = null)
+// Sets jpg & webp post attachments
+function bbc_upload_images($content = null, $post = null)
 {
-
+    $has_converted_images = false; 
+    
+    if(get_post_meta($post->ID, 'hasConvertedImages', true)) {
+        $has_converted_images = true;
+    }
+    
     $buffer = stripslashes($content);
 
-    // Get all images
-    $pattern1 = '/<img(?:[^>])*+>/i';
-    preg_match_all($pattern1, $buffer, $first_match);
+    // Check if this is not converted post
+    if(!$has_converted_images) {
 
-    $all_images = array_merge($first_match[0]);
+        // Get all images
+        $pattern1 = '/<img(?:[^>])*+>/i';
+        preg_match_all($pattern1, $buffer, $first_match);
 
-    foreach ($all_images as $image)
-    {
-        $tmp = $image;
-        // Removing existing width/height attributes
-        $clean_image = preg_replace('/\swidth="(\d*(px%)?)"(\sheight="(\w+)")?/', '', $tmp);
-        $clean_image = preg_replace('/loading="lazy"/', '', $clean_image);
+        $all_images = array_merge($first_match[0]);
 
-        if ($clean_image)
+        foreach ($all_images as $image)
         {
+            $tmp = $image;
+            // Removing existing width/height attributes
+            $clean_image = preg_replace('/\swidth="(\d*(px%)?)"(\sheight="(\w+)")?/', '', $tmp);
+            $clean_image = preg_replace('/loading="lazy"/', '', $clean_image);
 
-            // Blob-case variables
-            $is_blob = false;
-
-            // Get link of the file
-            preg_match('/src=[\'"]([^\'"]+)/', $clean_image, $src_match);
-
-            if (!empty($src_match))
+            if ($clean_image)
             {
-                // If image is BLOB encoded
-                if (strpos($src_match[1], 'base64') !== false)
+
+                // Blob-case variables
+                $is_blob = false;
+
+                // Get link of the file
+                preg_match('/src=[\'"]([^\'"]+)/', $clean_image, $src_match);
+
+                if (!empty($src_match))
                 {
-                    $is_blob = true;
-                    $image_url = bbc_base64_fixer($src_match[1]);
-                    $binary = base64_decode(explode(',', $image_url) [1]);
-                    $image_data = getimagesizefromstring($binary) ?: false;
-
-                    bbc_upload_image($post, $src_match, $image_data);
-                }
-                // Regular src case
-                else
-                {
-                    $protocol = stripos($_SERVER['SERVER_PROTOCOL'], 'https') === 0 ? 'https://' : 'http://';
-
-                    // If src doesn`t contains SERVER NAME then add it
-                    if (strpos($src_match[1], 'wp-content') && strpos($src_match[1], $protocol) === false)
+                    // If image is BLOB encoded
+                    if (strpos($src_match[1], 'base64') !== false)
                     {
-                        $src_match[1] = $protocol . $_SERVER['SERVER_NAME'] . $src_match[1] . '';
+                        $is_blob = true;
+                        $image_url = bbc_base64_fixer($src_match[1]);
+                        $binary = base64_decode(explode(',', $image_url) [1]);
+                        $image_data = getimagesizefromstring($binary) ?: false;
+                        
+                        bbc_upload_image($post, $src_match);
                     }
-                    // If image src returns 200 status then get image size
-                    if (bbc_check_url_status($src_match[1]))
+                    // Regular src case
+                    else
                     {
-                        $image_data = getimagesize($src_match[1]);
-                        bbc_upload_image($post, $src_match, $image_data);
+                        $protocol = stripos($_SERVER['SERVER_PROTOCOL'], 'https') === 0 ? 'https://' : 'http://';
+
+                        // If src doesn`t contains SERVER NAME then add it
+                        if (strpos($src_match[1], 'wp-content') && strpos($src_match[1], $protocol) === false)
+                        {
+                            $src_match[1] = $protocol . $_SERVER['SERVER_NAME'] . $src_match[1] . '';
+                        }
+                        // If image src returns 200 status then get image size
+                        if (bbc_check_url_status($src_match[1]))
+                        {
+                            $image_data = getimagesize($src_match[1]);
+                            bbc_upload_image($post, $src_match);
+                        }
                     }
-                }
 
-                $attachments = get_attached_media('image', $post->ID);
-                $attach_webp_id = array_key_last($attachments);
-                $attach_jpg_id = $attach_webp_id - 1;
+                    // Prepares and output picture element
+                    $attachments = get_attached_media('image', $post->ID);
+                    $attach_webp_id = array_key_last($attachments);
+                    $attach_jpg_id = $attach_webp_id - 1;
 
-                $src_jpg = wp_get_attachment_url($attach_jpg_id);
-                $src_webp = wp_get_attachment_url($attach_webp_id);
-                $width = $image_data[0] ?: 300;
-                $height = $image_data[1] ?: 300;
+                    $src_jpg = wp_get_attachment_url($attach_jpg_id);
+                    $src_webp = wp_get_attachment_url($attach_webp_id);
+                    $width = $image_data[0];
+                    $height = $image_data[1];
 
-                if($src_jpg && $src_webp) {
-                    $image = "
-                    <picture>
-                    <source srcset='${src_webp}' type='image/webp'>
-                    <img loading='lazy' src='${src_jpg}' width='${width}' height='${height}'>
-                    </picture>";
-                    $buffer = str_replace($tmp, $image, $buffer);
-                }
-                else {
-                    $buffer = str_replace($tmp, '', $buffer);
+                    if($src_jpg && $src_webp && $width && $height) {
+                        $image = "
+                        <picture>
+                        <source srcset='${src_webp}' type='image/webp'>
+                        <img loading='lazy' src='${src_jpg}' width='${width}' height='${height}'>
+                        </picture>";
+                        $buffer = str_replace($tmp, $image, $buffer);
+                        update_post_meta($post->ID, 'hasConvertedImages', '1');
+                    }
+                    else {
+                        $buffer = str_replace($tmp, '', $buffer);
+                    }
                 }
             }
-        }
-        elseif (!bbc_check_url_status($src_match[1]))
-        {
-            $buffer = str_replace($tmp, '', $buffer);
+            elseif (!bbc_check_url_status($src_match[1]))
+            {
+                $buffer = str_replace($tmp, '', $buffer);
+            }
         }
     }
     return $buffer;
 }
+
+
+// Filter content after attach
+function bbc_after_pload_images($content) {
+    $pattern = '/(<picture>.*?\n*?\s*?<\/picture>)/';
+    $filtered = preg_replace($pattern, "</p>$1<p>", $content);
+    return $filtered;
+}
+
 
 // Filters post content from validation errors
 function bbc_regex_post_content_filters($content)
@@ -226,7 +238,7 @@ function bbc_regex_post_content_filters($content)
     $filtered4 = preg_replace($pattern4, '', $filtered3);
     $filtered5 = preg_replace($pattern5, "", $filtered4);
     $filtered6 = preg_replace($pattern6, "", $filtered5);
-    $filtered7 = preg_replace($pattern6, "", $filtered6);
+    $filtered7 = preg_replace($pattern7, "", $filtered6);
     $filtered8 = preg_replace($pattern8, '$1', $filtered7);
     $filtered9 = preg_replace($pattern9, '', $filtered8);
 
@@ -239,9 +251,8 @@ function bbc_regex_post_content_filters($content)
 }
 
 // Adds alts for post content images
-function bbc_alt_singlepage_autocomplete($id, $content)
+function bbc_alt_singlepage_autocomplete($content, $post)
 {
-    $post = get_post($id);
     $old_content = $content;
 
     $any_alt_pattern = '/alt="(.*)"/';

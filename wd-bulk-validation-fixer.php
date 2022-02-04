@@ -6,7 +6,7 @@
  * GitHub Plugin URI: https://github.com/Mironezes/wd-bulk-validation-fixer
  * Primary Branch: realise
  * Description: Fixes all known validaiton issues on WD satellites posts.
- * Version: 0.14
+ * Version: 0.15
  * Author: Alexey Suprun
  * Author URI: https://github.com/mironezes
  * Requires at least: 5.5
@@ -24,7 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 require_once('helpers.php');
 
-define( 'WDBVF_VERSION', '0.14' );   
+define( 'WDBVF_VERSION', '0.15' );   
 define( 'WDBVF_DOMAIN', 'wdbvf' );                   // Text Domain
 define( 'WDBVF_SLUG', 'wd-bulk-validation-fixer' );      // Plugin slug
 define( 'WDBVF_FOLDER', plugin_dir_path( __FILE__ ) );    // Plugin folder
@@ -55,11 +55,9 @@ function wdbvf_init_the_plugin() {
 
 
 /**
- * Adding content filters on WP ALL IMPORT
+ * DOESNT WORK! Adding content filters on WP ALL IMPORT 
  */
 function wdbvf_on_save_post_validation_fix( $post_id, $xml, $is_update ) {
-	if ( !$is_update ) {
-
     require_once ABSPATH . 'wp-admin/includes/image.php';
     require_once ABSPATH . 'wp-admin/includes/file.php';
     require_once ABSPATH . 'wp-admin/includes/media.php';
@@ -67,13 +65,14 @@ function wdbvf_on_save_post_validation_fix( $post_id, $xml, $is_update ) {
     $post = get_post($post_id);
 
     $filtered_content_stage1 = bbc_regex_post_content_filters($post->post_content);
-    $filtered_content_stage2 = bbc_set_image_dimension($filtered_content_stage1, $post);
-    $filtered_content_stage3 = bbc_alt_singlepage_autocomplete($post_id, $filtered_content_stage2);
-    $filtered_content_stage4 = bbc_fix_headings($filtered_content_stage3);
+    $filtered_content_stage2 = bbc_upload_images($filtered_content_stage1, $post);
+		$filtered_content_stage3 = bbc_after_pload_images($filtered_content_stage2, $post);
+    $filtered_content_stage4 = bbc_alt_singlepage_autocomplete($post_id, $filtered_content_stage3);
+    $filtered_content_stage5 = bbc_fix_headings($filtered_content_stage4);
 
-		$excerpt = bbc_set_excerpt($filtered_content_stage4);
+		$excerpt = bbc_set_excerpt($filtered_content_stage5);
 
-      if(mb_strlen($filtered_content_stage4) <= 1) {
+      if(mb_strlen($filtered_content_stage5) <= 1) {
               $url = '/'.$post->post_name.'/';
             
               if(get_option('wdss_410s_dictionary')) {
@@ -92,34 +91,24 @@ function wdbvf_on_save_post_validation_fix( $post_id, $xml, $is_update ) {
               $args = array(
                 'ID' => $post_id,
                 'post_status' => 'draft',
-                'post_content' => $filtered_content_stage4,
-								'post_excerpt' => $excerpt,
                 'tags_input' => 'no_content'  
               );
               wp_update_post($args);				
       }
-      elseif(mb_strlen($filtered_content_stage4) > 100) {
+      elseif(mb_strlen($filtered_content_stage5) > 100) {
               $args = array(
                 'ID' => $post_id,
-                'post_content' => $filtered_content_stage4
+                'post_content' => $filtered_content_stage5,
+								'post_excerpt' => $excerpt,
               );
               wp_update_post($args);
   
               if(!has_post_thumbnail($post)) {
-                bbc_attach_first_image($post, $filtered_content_stage4);
-                $media = get_attached_media('image', $post_id); 
-                $media = array_shift( $media );
-                $media_id = $media->ID;
-                $media_guid = $media->guid;
-  
-                if(bbc_check_url_status($media_guid)) {
-                  set_post_thumbnail($post_id, $media_id);
-                }
-              }
+                bbc_attach_first_image($post);
+              }		
       }
-	}
 }
-add_action( 'pmxi_saved_post', 'wdbvf_on_save_post_validation_fix', 10, 3 );
+// add_action( 'pmxi_saved_post', 'wdbvf_on_save_post_validation_fix', 10, 3 );
 
 
 
@@ -151,14 +140,6 @@ function wdbvf_is_gutenberg_active() {
 	}
 
 	return true;
-
-	// if ( wdbvf_is_classic_editor_plugin_active() ) {
-	// $editor_option       = get_option( 'classic-editor-replace' );
-	// $block_editor_active = array( 'no-replace', 'block' );
-	//
-	// return in_array( $editor_option, $block_editor_active, true );
-	// }
-	// return true;
 }
 
 /**
@@ -472,16 +453,17 @@ function wdbvf_single_convert_ajax() {
 		$post = get_post($post_id);
 		$url = '/'.$post->post_name.'/';
 
-		$filtered_content_stage1 = bbc_regex_post_content_filters($_POST['content']);
-		$filtered_content_stage2 = bbc_set_image_dimension($filtered_content_stage1, $post);
-		$filtered_content_stage3 = bbc_alt_singlepage_autocomplete($post_id, $filtered_content_stage2);
-    $filtered_content_stage4 = bbc_fix_headings($filtered_content_stage3);
+    $filtered_content_stage1 = bbc_regex_post_content_filters($_POST['content']);
+    $filtered_content_stage2 = bbc_upload_images($filtered_content_stage1, $post);
+		$filtered_content_stage3 = bbc_after_pload_images($filtered_content_stage2);
+    $filtered_content_stage4 = bbc_alt_singlepage_autocomplete($filtered_content_stage3, $post);
+    $filtered_content_stage5 = bbc_fix_headings($filtered_content_stage4);
 
-		$excerpt = bbc_set_excerpt($filtered_content_stage4);
+		$excerpt = bbc_set_excerpt($filtered_content_stage5);
 
 		$post_data = array(
 			'ID'           => $post_id,
-			'post_content' => $filtered_content_stage4,
+			'post_content' => $filtered_content_stage5,
 			'post_excerpt' => $excerpt,
 			'tags_input' => ''
 		);
@@ -500,12 +482,7 @@ function wdbvf_single_convert_ajax() {
 		} else {
 			$json['message'] = $post_id;
 			if(!has_post_thumbnail($post)) {
-				bbc_attach_first_image($post, $filtered_content_stage4);
-				$media = get_attached_media('image', $post_id); 
-				$media = array_shift( $media );
-				$media_id = $media->ID;
-
-				set_post_thumbnail($post_id, $media_id);
+				bbc_attach_first_image($post);
 			}
 			die( json_encode( $json ) );
 		}
