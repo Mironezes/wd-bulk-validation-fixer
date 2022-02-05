@@ -28,14 +28,15 @@ function bbc_set_excerpt($content) {
 
     preg_match_all($condition, $content, $results);
 
-    if(strpos($results[0][0], 'toctitle') === false) {
-        $stripped = strip_tags($results[0][0]);
-    }
-    else {
-        $stripped = strip_tags($results[0][1]);
-    }
-    $excerpt = mb_substr($stripped, 0, 250, 'UTF-8') . ' [...]';
-    return $excerpt;
+	foreach($results as $result) {
+		$i = 1;
+		if(strpos($result[$i], 'toctitle') == false && strpos($result[$i], 'img') === false) {
+            $stripped = strip_tags($result[$i]);
+            $excerpt = mb_substr($stripped, 0, 250, 'UTF-8') . ' [...]';
+            return $excerpt;
+		}
+		$i++;
+	}
 }
 
 
