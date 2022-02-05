@@ -24,26 +24,17 @@ function bbc_fix_headings($content) {
 
 // Set an excerpt to post
 function bbc_set_excerpt($content) {
-    $excerpt = '';
+    $condition = '/<p.*?>.*?<\/p>/';
 
-    if (preg_match('/<div[^>]*id="toc"[^>]*>.*?<\/div>/', $content))
-    {
-        $filtered_content = strip_tags(preg_replace('#<div[^>]*id="toc"[^>]*>.*?</div>#is', '', $content));
-    }
+    preg_match_all($condition, $content, $results);
 
-    
-    elseif (preg_match('/<p>(.*?)<\/p>/', $content))
-    {
-        $excerpt_raw = preg_match_all('/<p>(.*?)<\/p>/', $content, $results);
-        if (!empty($results[0][0]))
-        {
-            $filtered_content = strip_tags($results[0][0]);
-        }
+    if(strpos($results[0][0], 'toctitle') === false) {
+        $stripped = strip_tags($results[0][0]);
     }
-
-    if(!empty($filtered_content)) {
-        $excerpt = mb_substr(strip_tags($filtered_content), 0, 250) . '...';
+    else {
+        $stripped = strip_tags($results[0][1]);
     }
+    $excerpt = mb_substr($stripped, 0, 250, 'UTF-8') . ' [...]';
     return $excerpt;
 }
 
@@ -196,12 +187,12 @@ function bbc_upload_images($content = null, $post = null)
                 $buffer = str_replace($tmp, '', $buffer);
             }
         }
-    }
-
-    // Inserts </p>{}<p> template around picture for better view
-    $pattern = '/(?<=\.|\n)(<picture>.*?<\/picture>)(?=\w|\s+|\n+)/';
-    if(preg_match($pattern, $buffer)) {
-        $buffer = preg_replace($pattern, "</p>$1<p>", $buffer);
+    
+        // Inserts </p>{}<p> template around picture for better view
+        $pattern = '/(?<=\.|\n)(<picture>.*?<\/picture>)(?=\w|\s+|\n+)/';
+        if(preg_match($pattern, $buffer)) {
+            $buffer = preg_replace($pattern, "</p>$1<p>", $buffer);
+        }
     }
     return $buffer;
 }
