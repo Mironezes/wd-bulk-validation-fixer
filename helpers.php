@@ -148,7 +148,7 @@ function bbc_upload_images($content = null, $post = null)
                     // Regular src case
                     else
                     {
-                        $protocol = stripos($_SERVER['SERVER_PROTOCOL'], 'https') === 0 ? 'https://' : 'http://';
+                        $protocol = strpos($_SERVER['SERVER_PROTOCOL'], 'https') === 0 ? 'https://' : 'http://';
 
                         // If src doesn`t contains SERVER NAME then add it
                         if (strpos($src_match[1], 'wp-content') && strpos($src_match[1], $protocol) === false)
