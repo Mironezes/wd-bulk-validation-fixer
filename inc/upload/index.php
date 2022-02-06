@@ -18,10 +18,10 @@ function bbc_upload_image($post = null, $src = null)
         }
         else {
             // If src doesn`t contains SERVER NAME then add it
-            $protocol = strpos($_SERVER['SERVER_PROTOCOL'], 'https') === 0 ? 'https://' : 'http://';
+            $protocol = $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
             if (strpos($src[1], 'wp-content') && strpos($src[1], $protocol) === false)
             {
-                $src[1] = $protocol . $_SERVER['SERVER_NAME'] . $src[1] . '';
+                $src[1] = $protocol . $_SERVER['SERVER_NAME'] . $src[1];
             }
 
             $data = file_get_contents($src[1]);
