@@ -17,14 +17,10 @@ function bbc_upload_image($post = null, $src = null)
             }
         }
         else {
-            // If src doesn`t contains SERVER NAME then add it
-            $protocol = $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
-            if (strpos($src[1], 'wp-content') && strpos($src[1], $protocol) === false)
-            {
-                $src[1] = $protocol . $_SERVER['SERVER_NAME'] . $src[1];
-            }
 
             $data = file_get_contents($src[1]);
+            // $raw_data = base64_encode(file_get_contents($src[1]));
+            // $data = base64_decode($raw_data);
         }
 
         // #WRONG PLACEMENT, REWORK

@@ -6,7 +6,7 @@
  * GitHub Plugin URI: https://github.com/Mironezes/wd-bulk-validation-fixer
  * Primary Branch: realise
  * Description: Fixes all known validaiton issues on WD satellites posts.
- * Version: 0.15.4
+ * Version: 0.15.5
  * Author: Alexey Suprun
  * Author URI: https://github.com/mironezes
  * Requires at least: 5.5
@@ -161,7 +161,8 @@ function wdbvf_show_admin_page() {
 	$indexed_exist = wdbvf_exist_indexed( $indexed_arr );
 	?>
 <div id="wdbvf-wrapper" class="wrap">
-	<h1><?php echo get_admin_page_title(); ?></h1>
+	<h1><?php echo get_admin_page_title(); ?> <small>ver <?= WDBVF_VERSION; ?></small></h1>
+	<a href="https://maxiproject.atlassian.net/wiki/spaces/FSDV/pages/3594682804/WD+Satellite" target="_blank">Documentation</a>
 	<?php
 	global $wdbvf_success, $wdbvf_error;
 	if ( isset( $_GET['result'] ) && $_GET['result'] == '1' ) {

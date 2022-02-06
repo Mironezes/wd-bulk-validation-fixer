@@ -149,11 +149,12 @@ function bbc_upload_images($content = null, $post = null)
                     else
                     {
                         $protocol = $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
+                        $port = $_SERVER['SERVER_PORT'] ? ':' . $_SERVER['SERVER_PORT']   : '';
 
                         // If src doesn`t contains SERVER NAME then add it
-                        if (strpos($src_match[1], 'wp-content') && strpos($src_match[1], $protocol) === false)
+                        if (strpos($src_match[1], 'wp-content') !== false && strpos($src_match[1], $protocol) === false)
                         {
-                            $src_match[1] = $protocol . $_SERVER['SERVER_NAME'] . $src_match[1] . '';
+                            $src_match[1] = $protocol . $_SERVER['SERVER_NAME'] . $port . $src_match[1];
                         }
                         // If image src returns 200 status then get image size
                         if (bbc_check_url_status($src_match[1]))
@@ -168,12 +169,14 @@ function bbc_upload_images($content = null, $post = null)
                     $attach_webp_id = array_key_last($attachments);
                     $attach_jpg_id = $attach_webp_id - 1;
 
+                    $filesize = filesize( get_attached_file( $attach_webp_id ) ) ?: 0;
+
                     $src_jpg = wp_get_attachment_url($attach_jpg_id);
                     $src_webp = wp_get_attachment_url($attach_webp_id);
                     $width = $image_data[0];
                     $height = $image_data[1];
 
-                    if($src_jpg && $src_webp && $width && $height) {
+                    if($filesize && $src_jpg && $src_webp && $width && $height) {
                         $image = "<picture><source srcset='${src_webp}' type='image/webp'><img loading='lazy' src='${src_jpg}' width='${width}' height='${height}'></picture>";
                         $buffer = str_replace($tmp, $image, $buffer);
                         update_post_meta($post->ID, 'hasConvertedImages', '1');
