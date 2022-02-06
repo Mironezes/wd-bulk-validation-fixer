@@ -213,9 +213,6 @@ function bbc_regex_post_content_filters($content)
     $pattern6 = '/<\w{1,4}>\s?<\/\w{1,4}>/';
     $pattern7 = '/<\/p>\s?<p>/';
     $pattern8 = '/<p>(<iframe[^>]*><\/iframe[^>]*>)<\/p>/';
-    $pattern9 = '/[^ -\x{2122}]\s+|\s*[^ -\x{2122}]/u';
-
-    
     $pattern10 = '/<\/p>\s?<\/p>/';
     $pattern11 = '/(<\/h2>)<\/p>/';
 	$pattern12 = '/(<\/?strong>)/';
@@ -228,15 +225,15 @@ function bbc_regex_post_content_filters($content)
     $filtered5 = preg_replace($pattern5, "", $filtered4);
     $filtered6 = preg_replace($pattern6, "", $filtered5);
     $filtered7 = preg_replace($pattern7, "", $filtered6);
-    $filtered8 = preg_replace($pattern8, '$1', $filtered7);
-    $filtered9 = preg_replace($pattern9, '', $filtered8);
-
-    $filtered10 = preg_replace($pattern10, '', $filtered9);
+    $filtered8 = preg_replace($pattern8, '$1', $filtered7); 
+    $filtered10 = preg_replace($pattern10, '', $filtered8);
     $filtered11 = preg_replace($pattern11, '$1', $filtered10);
     $filtered12 = preg_replace($pattern12, '', $filtered11);
     $filtered13 = preg_replace($pattern13, '<h2>$1</h2>', $filtered12);
 
-    return $filtered13;
+    $filtered14 = filter_var($filtered13, FILTER_UNSAFE_RAW, FILTER_FLAG_STRIP_HIGH);
+
+    return $filtered14;
 }
 
 // Adds alts for post content images
