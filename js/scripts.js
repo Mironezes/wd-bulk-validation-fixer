@@ -115,11 +115,11 @@ function WDBVF_Init() {
 		doing_ajax = true;
 		let jsonData = linkObject.data('json');
 		jsonData.content = content;
+		jsonData.validation_only = validation_only_button.checked;
 		jQuery.ajax({
 			method: "POST",
 			url: wdbvfObj.ajaxUrl,
 			data: jsonData,
-			mode: validation_only_button.checked,
 		})
 		.done(function( data ){
 			doing_ajax = false;

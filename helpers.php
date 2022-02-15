@@ -207,6 +207,11 @@ function bbc_upload_images($content = null, $post = null)
 }
 
 
+function bbc_set_width_height_images($content) {
+
+}
+
+
 // Filters post content from validation errors
 function bbc_regex_post_content_filters($content)
 {
