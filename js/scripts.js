@@ -8,11 +8,13 @@ function WDBVF_Init() {
 	do_action_top_button = document.querySelector('#doaction'),
 	do_action_bottom_button = document.querySelector('#doaction2'),
 
+	validation_only_button = document.querySelector('#wdbvf-validation-only input');
+
 	convert_queue = [],
 	doing_ajax = false;
 
 
-	scan_button.addEventListener('click', function(e){
+	scan_button.addEventListener('click', function(e) {
 		e.preventDefault();
 		scan_button.setAttribute("disabled", true);
 		scanPosts(0, -1);
@@ -66,85 +68,6 @@ function WDBVF_Init() {
 		});
 	});
 
-
-
-	// bulk posts converting via ajax
-	function bulkConvertPosts( offset = 0, total = -1){
-		if ( doing_ajax ) return;
-
-		doing_ajax = true;
-		let nonce = convert_all_button.dataset.nonce;
-		output.innerHTML = wdbvfObj.bulkConvertingMessage;
-		jQuery.ajax({
-			method: "GET",
-			url: wdbvfObj.ajaxUrl,
-			data: { action : "wdbvf_bulk_convert", offset : offset, total : total, _wpnonce : nonce }
-		})
-		.done(function( data ){
-			doing_ajax = false;
-			if ( data.error ) {
-				output.innerHTML = data.message;
-				return;
-			}
-			let convertedData = [];
-			let arrayLength = data.postsData.length;
-			for (let i = 0; i < arrayLength; i++) {
-
-				let convertedPost = {
-					id		: data.postsData[i].id,
-					content	: data.postsData[i].content
-				};
-
-				convertedData.push( convertedPost );
-			}
-			bulkSaveConverted( convertedData, data.offset, data.total, data.message );
-			return;
-		})
-		.fail(function(){
-			doing_ajax = false;
-			output.innerHTML = wdbvfObj.serverErrorMessage;
-		});
-	}
-
-	// bulk saving converted posts via ajax
-	function bulkSaveConverted( convertedData, offset, total, message ) {
-		if ( doing_ajax ) return;
-		doing_ajax = true;
-		let nonce = convert_all_button.dataset.nonce;
-		let jsonData = {
-			action : "wdbvf_bulk_convert",
-			offset : offset,
-			total : total,
-			postsData : convertedData,
-			_wpnonce : nonce
-		};
-		jQuery.ajax({
-			method: "POST",
-			url: wdbvfObj.ajaxUrl,
-			data: jsonData
-		})
-		.done(function( data ){
-			doing_ajax = false;
-			if ( data.error ) {
-				output.innerHTML = data.message;
-				return;
-			}
-			if ( data.offset >= data.total ) {
-				convert_all_button.setAttribute("disabled", false);
-				output.innerHTML = wdbvfObj.bulkConvertingSuccessMessage;
-				return;
-			}
-			bulkConvertPosts( offset, total );
-			output.innerHTML = message;
-
-			return;
-		})
-		.fail(function(){
-			doing_ajax = false;
-			output.innerHTML = wdbvfObj.serverErrorMessage;
-		});
-	}
-
 	
 	// Single or group posts converting via ajax
 	function convertPosts() {
@@ -185,6 +108,9 @@ function WDBVF_Init() {
 
 	// Single or group saving of converted posts via ajax
 	function saveConverted( content, linkObject, proceededRow ){
+
+		console.log(validation_only_button.checked);
+
 		if ( doing_ajax ) return;
 		doing_ajax = true;
 		let jsonData = linkObject.data('json');
@@ -192,7 +118,8 @@ function WDBVF_Init() {
 		jQuery.ajax({
 			method: "POST",
 			url: wdbvfObj.ajaxUrl,
-			data: jsonData
+			data: jsonData,
+			mode: validation_only_button.checked,
 		})
 		.done(function( data ){
 			doing_ajax = false;

@@ -41,9 +41,6 @@ define( 'WDBVF_STATUSES', serialize( array( 'publish', 'future' ) ) );
  */
 add_action( 'plugins_loaded', 'wdbvf_init_the_plugin' );
 function wdbvf_init_the_plugin() {
-	if ( ! wdbvf_is_gutenberg_active() ) {
-		return;
-	}
 	// dispatching POST to GET parameters
 	add_action( 'init', 'wdbvf_dispatch_url' );
 	// adding subitem to the Tools menu item
@@ -51,66 +48,7 @@ function wdbvf_init_the_plugin() {
 	// scan posts via ajax
 	add_action( 'wp_ajax_wdbvf_scan_posts', 'wdbvf_scan_posts_ajax' );
 	// single post convert via ajax
-	add_action( 'wp_ajax_wdbvf_single_convert', 'wdbvf_single_convert_ajax' );
-}
-
-
-
-
-/**
- * Check if Block Editor is active.
- * Must only be used after plugins_loaded action is fired.
- *
- * @return bool
- */
-function wdbvf_is_gutenberg_active() {
-	// Gutenberg plugin is installed and activated.
-	// $gutenberg = ! ( false === has_filter( 'replace_editor', 'gutenberg_init' ) );
-
-	// Block editor since 5.0.
-	$block_editor = version_compare( $GLOBALS['wp_version'], '5.0-beta', '>' );
-
-	// if ( ! $gutenberg && ! $block_editor ) {
-	if ( ! $block_editor ) {
-		return false;
-	}
-
-	$gutenberg_plugin = function_exists( 'gutenberg_register_packages_scripts' );
-
-	// Remove Gutenberg plugin scripts reassigning.
-	if ( $gutenberg_plugin ) {
-		add_action( 'wp_default_scripts', 'wdbvf_remove_gutenberg_overrides', 5 );
-	}
-
-	return true;
-}
-
-/**
- * Check if Classic Editor plugin is active.
- *
- * @return bool
- */
-function wdbvf_is_classic_editor_plugin_active() {
-	if ( ! function_exists( 'is_plugin_active' ) ) {
-		include_once ABSPATH . 'wp-admin/includes/plugin.php';
-	}
-
-	if ( is_plugin_active( 'classic-editor/classic-editor.php' ) ) {
-		return true;
-	}
-
-	return false;
-}
-
-/**
- * Remove Gutenberg plugin scripts reassigning.
- */
-function wdbvf_remove_gutenberg_overrides() {
-	$pagematch = strpos( $_SERVER['REQUEST_URI'], '/wp-admin/tools.php?page=' . WDBVF_SLUG );
-	if ( $pagematch !== false ) {
-		remove_action( 'wp_default_scripts', 'gutenberg_register_vendor_scripts' );
-		remove_action( 'wp_default_scripts', 'gutenberg_register_packages_scripts' );
-	}
+	add_action( 'wp_ajax_wdbvf_single_convert', 'wdbvf_convert_ajax' );
 }
 
 /**
@@ -371,7 +309,7 @@ function wdbvf_status_label( $status ) {
 /**
  * Single post converting via ajax.
  */
-function wdbvf_single_convert_ajax() {
+function wdbvf_convert_ajax() {
 	require_once('helpers.php');
 
 	header( 'Content-Type: application/json; charset=UTF-8' );
@@ -446,9 +384,7 @@ function wdbvf_single_convert_ajax() {
  * Cleaning up on plugin deactivation.
  */
 function wdbvf_deactivate() {
-	global $wpdb;
-	$query = "DELETE FROM {$wpdb->postmeta} WHERE meta_key='" . WDBVF_META_KEY . "'";
-	$wpdb->query( $query );
+	// Empty...
 }
 register_deactivation_hook( __FILE__, 'wdbvf_deactivate' );
 
