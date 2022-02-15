@@ -6,7 +6,7 @@
  * GitHub Plugin URI: https://github.com/Mironezes/wd-bulk-validation-fixer
  * Primary Branch: realise
  * Description: Fixes all known validaiton issues on WD satellites posts.
- * Version: 0.15
+ * Version: 0.16
  * Author: Alexey Suprun
  * Author URI: https://github.com/mironezes
  * Requires at least: 5.5
@@ -25,7 +25,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 require_once('helpers.php');
 require_once(__DIR__ . '/inc/import.php');
 
-define( 'WDBVF_VERSION', '0.15' );   
+define( 'WDBVF_VERSION', '0.16' );   
 define( 'WDBVF_DOMAIN', 'wdbvf' );                   // Text Domain
 define( 'WDBVF_SLUG', 'wd-bulk-validation-fixer' );      // Plugin slug
 define( 'WDBVF_FOLDER', plugin_dir_path( __FILE__ ) );    // Plugin folder
@@ -156,12 +156,14 @@ function wdbvf_enqueue_admin_css_js() {
 /**
  * Rendering admin page of the plugin.
  */
+
 function wdbvf_show_admin_page() {
 	$indexed_arr   = wdbvf_count_indexed();
 	$indexed_exist = wdbvf_exist_indexed( $indexed_arr );
 	?>
 <div id="wdbvf-wrapper" class="wrap">
-	<h1><?php echo get_admin_page_title(); ?></h1>
+	<h1><?php echo get_admin_page_title(); ?> <small>ver <?= WDBVF_VERSION; ?></small></h1>
+	<a href="https://maxiproject.atlassian.net/wiki/spaces/FSDV/pages/3594682804/WD+Satellite" target="_blank">Documentation</a>
 	<?php
 	global $wdbvf_success, $wdbvf_error;
 	if ( isset( $_GET['result'] ) && $_GET['result'] == '1' ) {
@@ -174,9 +176,18 @@ function wdbvf_show_admin_page() {
 	}
 	?>
 	<p><span style="color:red;"><?php _e( 'Please note:', WDBVF_DOMAIN ); ?></span> <?php _e( 'Processing filters on content is irreversible. Its highly recommended to create a backup before start.', WDBVF_DOMAIN ); ?></p>
-	<p>
+	<div id="wdbvf-settings">
+
+		<h2>Additional Settings</h2>
+
+		<label id="wdbvf-validation-only">
+			<input type="checkbox" name="wdbvf-validation-only" checked>
+			Validation Only
+		</label>
+
 		<button id="wdbvf-scan-btn" class="button button-hero" data-nonce="<?php echo wp_create_nonce( 'wdbvf_scan_content' ); ?>"><?php _e( 'Scan Content', WDBVF_DOMAIN ); ?></button>
-	</p>
+		
+	</div>
 	<div id="wdbvf-output">
 	<?php if ( $indexed_exist ) : ?>
 		<div id="wdbvf-results"><?php wdbvf_render_results( $indexed_arr ); ?></div>
