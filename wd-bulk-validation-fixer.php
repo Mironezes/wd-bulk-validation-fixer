@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 require_once('helpers.php');
-require_once(__DIR__ . '/inc/import.php');
+require_once(__DIR__ . '/inc/insert.php');
 
 define( 'WDBVF_VERSION', '0.16' );   
 define( 'WDBVF_DOMAIN', 'wdbvf' );                   // Text Domain
