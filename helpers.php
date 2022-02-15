@@ -207,8 +207,124 @@ function bbc_upload_images($content = null, $post = null)
 }
 
 
-function bbc_set_width_height_images($content) {
+// Auto width/height attributes
+function bbc_set_image_dimension($content)
+{
 
+    $buffer = stripslashes($content);
+
+    // Get all images
+    $pattern1 = '/<img(?:[^>])*+>/i';
+    preg_match_all($pattern1, $buffer, $first_match);
+
+    $all_images = array_merge($first_match[0]);
+
+    foreach ($all_images as $image)
+    {
+
+        $tmp = $image;
+        // Removing existing width/height attributes
+        $clean_image = preg_replace('/\swidth="(\d*(px%)?)"(\sheight="(\w+)")?/', '', $tmp);
+        $clean_image = preg_replace('/loading="lazy"/', '', $clean_image);
+
+        if ($clean_image)
+        {
+
+            // Blob-case variables
+            $is_blob = false;
+            $clean_blob_image;
+
+            // Get link of the file
+            preg_match('/src=[\'"]([^\'"]+)/', $clean_image, $src_match);
+
+            if (!empty($src_match))
+            {
+                // Compares src with banned hosts
+                $in_block_list = false;
+                $exceptions = get_option('wdss_excluded_hosts_dictionary', '');
+                // chemistryland.com, fin.gc.ca, support.revelsystems.com
+                if (!empty($exceptions) && is_array($exceptions))
+                {
+                    foreach ($exceptions as $exception)
+                    {
+                        if (strpos($src_match[1], $exception) !== false)
+                        {
+                            $in_block_list = true;
+                        }
+                    }
+                }
+
+                // If image is BLOB encoded
+                if (strpos($src_match[1], 'base64') !== false)
+                {
+                    $is_blob = true;
+                    $image_url = bbc_base64_fixer($src_match[1]);
+                    $clean_blob_image = '<img src="' . $image_url . '">';
+                    $binary = base64_decode(explode(',', $image_url) [1]);
+                    $image_data = getimagesizefromstring($binary) ? getimagesizefromstring($binary) : false;
+
+                    if ($image_data)
+                    {
+                        $width = $image_data[0];
+                        $height = $image_data[1];
+                    }
+                }
+                // Regular src case
+                else
+                {
+                    // If image`s host in block list then remove it
+                    if ($in_block_list)
+                    {
+                        $buffer = str_replace($tmp, '', $buffer);
+                        return $buffer;
+                    }
+
+                    $protocol = stripos($_SERVER['SERVER_PROTOCOL'], 'https') === 0 ? 'https://' : 'http://';
+
+                    // If src doesn`t contains SERVER NAME then add it
+                    if (strpos($src_match[1], 'wp-content') && strpos($src_match[1], $protocol) === false)
+                    {
+                        $src_match[1] = $protocol . $_SERVER['SERVER_NAME'] . $src_match[1] . '';
+                    }
+                    // If image src returns 200 status then get image size
+                    if (bbc_check_url_status($src_match[1]))
+                    {
+                        list($width, $height) = getimagesize($src_match[1]);
+                    }
+                }
+
+            }
+
+            // Checks if width & height are defined
+            if (!empty($width) && !empty($height))
+            {
+                $dimension = 'width="' . $width . '" height="' . $height . '" ';
+
+                // Add width and width attribute
+                if ($is_blob)
+                {
+                    $image = str_replace('<img', '<img loading="lazy" ' . $dimension, $clean_blob_image);
+                }
+                else
+                {
+                    $image = str_replace('<img', '<img loading="lazy" ' . $dimension, $clean_image);
+                }
+
+                // Replace image with new attributes
+                $buffer = str_replace($tmp, $image, $buffer);
+
+            }
+            else
+            {
+                $buffer = str_replace($tmp, '', $buffer);
+            }
+        }
+        elseif (!bbc_check_url_status($src_match[1]))
+        {
+            $buffer = str_replace($tmp, '', $buffer);
+        }
+    }
+    return $buffer;
 }
 
 

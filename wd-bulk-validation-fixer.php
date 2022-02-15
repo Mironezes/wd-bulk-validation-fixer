@@ -345,14 +345,16 @@ function wdbvf_convert_ajax() {
 		$post = get_post($post_id);
 		$url = '/'.$post->post_name.'/';
 
+		var_dump($_POST['validation_only']);
+
     $filtered_content_stage1 = bbc_regex_post_content_filters($_POST['content']);
-		if(!$_POST['validation_only']) {
+		if($_POST['validation_only'] == 'false') {
 			$filtered_content_stage2 = bbc_upload_images($filtered_content_stage1, $post);
 			$filtered_content_stage3 = bbc_alt_singlepage_autocomplete($filtered_content_stage2, $post);
 			$filtered_content_stage4 = bbc_fix_headings($filtered_content_stage3);
 		}
 		else {
-			$filtered_content_stage2 = bbc_set_width_height_images($filtered_content_stage1, $post);
+			$filtered_content_stage2 = bbc_set_image_dimension($filtered_content_stage1, $post);
 			$filtered_content_stage3 = bbc_alt_singlepage_autocomplete($filtered_content_stage2, $post);
 			$filtered_content_stage4 = bbc_fix_headings($filtered_content_stage3);
 		}

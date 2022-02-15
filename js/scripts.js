@@ -108,9 +108,6 @@ function WDBVF_Init() {
 
 	// Single or group saving of converted posts via ajax
 	function saveConverted( content, linkObject, proceededRow ){
-
-		console.log(validation_only_button.checked);
-
 		if ( doing_ajax ) return;
 		doing_ajax = true;
 		let jsonData = linkObject.data('json');
@@ -121,7 +118,7 @@ function WDBVF_Init() {
 			url: wdbvfObj.ajaxUrl,
 			data: jsonData,
 		})
-		.done(function( data ){
+		.done(function( ){
 			doing_ajax = false;
 			return;
 		})
