@@ -120,7 +120,7 @@ function wdbvf_show_admin_page() {
 
 		<label id="wdbvf-validation-only">
 			<input type="checkbox" name="wdbvf-validation-only" checked>
-			Validation Only
+			Text Content Only
 		</label>
 
 		<button id="wdbvf-scan-btn" class="button button-hero" data-nonce="<?php echo wp_create_nonce( 'wdbvf_scan_content' ); ?>"><?php _e( 'Scan Content', WDBVF_DOMAIN ); ?></button>

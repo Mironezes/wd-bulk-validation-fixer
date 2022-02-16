@@ -9,8 +9,7 @@ function bbc_fix_headings($content) {
 
 	preg_match_all($pattern, $content, $results);
 	if(!empty($results)) {
-
-		if(mb_strpos($results[0][0], 'h2') == false) {
+		if(!empty($results[0][0]) && mb_strpos($results[0][0], 'h2') == false) {
 			$h2 = preg_replace($pattern, '<h2>$1</h2>', $results[0][0]);
 			
 			$old_tag = preg_replace('/\//', '\/', $results[0][0]);
