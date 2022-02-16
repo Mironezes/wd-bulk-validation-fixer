@@ -2,7 +2,9 @@
     // Image Upload In Format Loop Handler 
     function bbc_upload_loop($post, $data) {
 
-      include( ABSPATH . 'wp-admin/includes/image.php' );
+      require_once ABSPATH . 'wp-admin/includes/file.php';
+      require_once ABSPATH . 'wp-admin/includes/media.php';
+      require_once ABSPATH . 'wp-admin/includes/image.php';
 
       $output_formats = ['jpg', 'webp'];
     

@@ -1,8 +1,5 @@
 <?php
 
-require_once ABSPATH . 'wp-admin/includes/file.php';
-require_once ABSPATH . 'wp-admin/includes/media.php';
-
 require_once(__DIR__ . '/loop.php');
 
 // Image Upload Handler 
