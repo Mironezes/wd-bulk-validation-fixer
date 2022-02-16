@@ -186,7 +186,7 @@ function bbc_upload_images($content = null, $post = null)
                         update_post_meta($post->ID, 'hasConvertedImages', '1');
                     }
                     else {
-                        // $buffer = str_replace($tmp, '', $buffer);
+                        $buffer = str_replace($tmp, '', $buffer);
                     }
                 }
             }
