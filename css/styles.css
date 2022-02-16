@@ -7,15 +7,12 @@
 #wdbvf-settings {
   margin-bottom: 35px;
 }
-#wdbvf-validation-only {
+#wdbvf-settings label {
   display: flex;
   align-items: center;
   margin-bottom: 25px;
 }
-#wdbvf-validation-only label {
-  font-weight: 500;
-}
-#wdbvf-validation-only input {
+#wdbvf-settings label input {
   position: relative;
   top: 2.5px;
 }

@@ -1,6 +1,9 @@
 <?php
 
 function wdbvf_on_insert_post_handler( $post_id, $post ) {
+
+    if( get_option('wdbvf_auto_apply_on_publication') === '1' ) {
+
       $filtered_content_stage1 = bbc_regex_post_content_filters($post->post_content);
       $filtered_content_stage2 = bbc_set_image_dimension($filtered_content_stage1);
       $filtered_content_stage3 = bbc_alt_singlepage_autocomplete($filtered_content_stage2, $post);
@@ -46,6 +49,9 @@ function wdbvf_on_insert_post_handler( $post_id, $post ) {
                   bbc_attach_first_image($post);
                 }		
                 add_action( 'publish_post', 'wdbvf_on_insert_post_handler', 12, 2 );
-        }  
+        } 
+      } 
 }
 add_action( 'publish_post', 'wdbvf_on_insert_post_handler', 10, 2 );
+
+

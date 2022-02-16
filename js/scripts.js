@@ -8,7 +8,8 @@ function WDBVF_Init() {
 	do_action_top_button = document.querySelector('#doaction'),
 	do_action_bottom_button = document.querySelector('#doaction2'),
 
-	validation_only_button = document.querySelector('#wdbvf-validation-only input');
+	validation_only_input = document.querySelector('#wdbvf-validation-only input');
+	auto_apply_input = document.querySelector('#wdbvf-enable-auto-apply input');
 
 	convert_queue = [],
 	doing_ajax = false;
@@ -19,6 +20,30 @@ function WDBVF_Init() {
 		scan_button.setAttribute("disabled", true);
 		scanPosts(0, -1);
 	});
+	
+
+
+	function autoApplyToggler() {
+		let status;
+
+		if(auto_apply_input.checked) {
+			status = 1;
+		}
+		else {
+			status = 0;
+		}
+
+			jQuery.ajax({
+				method: "POST",
+				url: wdbvfObj.ajaxUrl,
+				data: { action : "wdbvf_auto_apply", status: status, nonce : wdbvfObj.autoApplyOnPublicationNonce }
+			})
+			.done(function() {
+					alert('Saved!');
+			});
+	}
+	auto_apply_input.addEventListener('click', autoApplyToggler);
+
 
 	// Scanning posts via ajax
 	function scanPosts( offset = 0, total = -1) {
@@ -112,7 +137,7 @@ function WDBVF_Init() {
 		doing_ajax = true;
 		let jsonData = linkObject.data('json');
 		jsonData.content = content;
-		jsonData.validation_only = validation_only_button.checked;
+		jsonData.validation_only = validation_only_input.checked;
 		jQuery.ajax({
 			method: "POST",
 			url: wdbvfObj.ajaxUrl,

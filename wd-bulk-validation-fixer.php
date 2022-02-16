@@ -23,7 +23,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 require_once('helpers.php');
+require_once(__DIR__ . '/inc/import.php');
 require_once(__DIR__ . '/inc/insert.php');
+
 
 define( 'WDBVF_VERSION', '0.16' );   
 define( 'WDBVF_DOMAIN', 'wdbvf' );                   // Text Domain
@@ -49,6 +51,8 @@ function wdbvf_init_the_plugin() {
 	add_action( 'wp_ajax_wdbvf_scan_posts', 'wdbvf_scan_posts_ajax' );
 	// single post convert via ajax
 	add_action( 'wp_ajax_wdbvf_single_convert', 'wdbvf_convert_ajax' );
+	// auto apply fixes on post publication
+	add_action( 'wp_ajax_wdbvf_auto_apply', 'wdbvf_auto_apply_ajax' );
 }
 
 /**
@@ -84,7 +88,7 @@ function wdbvf_enqueue_admin_css_js() {
 		'convertingSingleMessage'      => __( 'Processing...', WDBVF_DOMAIN ),
 		'convertedSingleMessage'       => __( 'Completed', WDBVF_DOMAIN ),
 		'failedMessage'                => __( 'Failed', WDBVF_DOMAIN ),
-		'resetPostsValidationNonce' => wp_create_nonce('reset-posts-validation-status-nonce'),
+		'autoApplyOnPublicationNonce' => wp_create_nonce('auto-apply-on-publication-nonce'),
 	);
 	wp_localize_script( WDBVF_DOMAIN . '-script', 'wdbvfObj', $jsObj );
 	wp_enqueue_script( WDBVF_DOMAIN . '-script' );
@@ -121,6 +125,19 @@ function wdbvf_show_admin_page() {
 		<label id="wdbvf-validation-only">
 			<input type="checkbox" name="wdbvf-validation-only" checked>
 			Don`t convert images
+		</label>
+
+		<label id="wdbvf-enable-auto-apply">
+
+			<?php 
+				$is_checked = '';
+				if(get_option('wdbvf_auto_apply_on_publication') === '1') {
+					$is_checked = 'checked';
+				}
+			?>
+
+			<input type="checkbox" name="wdbvf-enable-auto-apply" value="1" <?= $is_checked; ?> >
+			Enable auto content fixes on post publication
 		</label>
 
 		<button id="wdbvf-scan-btn" class="button button-hero" data-nonce="<?php echo wp_create_nonce( 'wdbvf_scan_content' ); ?>"><?php _e( 'Scan Content', WDBVF_DOMAIN ); ?></button>
@@ -387,6 +404,25 @@ function wdbvf_convert_ajax() {
 			die( json_encode( $json ) );
 		}
 	}
+}
+
+
+/**
+ * Auto apply fixes on post publication.
+ */
+function wdbvf_auto_apply_ajax() {
+	check_ajax_referer( 'auto-apply-on-publication-nonce', 'autoApplyOnPublicationNonce', false );
+
+	var_dump($_POST['status']);
+
+	if($_POST['status'] === '1') {
+		update_option('wdbvf_auto_apply_on_publication', '1');
+	}
+	else {
+		update_option('wdbvf_auto_apply_on_publication', '0');
+	}
+
+
 }
 
 /**
