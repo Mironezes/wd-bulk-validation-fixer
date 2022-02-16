@@ -1,14 +1,9 @@
 <?php
 
 function wdbvf_on_insert_post_handler( $post_id, $post ) {
-
-  require_once ABSPATH . 'wp-admin/includes/image.php';
-  require_once ABSPATH . 'wp-admin/includes/file.php';
-  require_once ABSPATH . 'wp-admin/includes/media.php';
-
-
       $filtered_content_stage1 = bbc_regex_post_content_filters($post->post_content);
-      $filtered_content_stage3 = bbc_alt_singlepage_autocomplete($filtered_content_stage1, $post);
+      $filtered_content_stage2 = bbc_set_image_dimension($filtered_content_stage1);
+      $filtered_content_stage3 = bbc_alt_singlepage_autocomplete($filtered_content_stage2, $post);
       $filtered_content_stage4 = bbc_fix_headings($filtered_content_stage3);
   
       $excerpt = bbc_set_excerpt($filtered_content_stage4);

@@ -354,7 +354,7 @@ function wdbvf_convert_ajax() {
 			$filtered_content_stage4 = bbc_fix_headings($filtered_content_stage3);
 		}
 		else {
-			$filtered_content_stage2 = bbc_set_image_dimension($filtered_content_stage1, $post);
+			$filtered_content_stage2 = bbc_set_image_dimension($filtered_content_stage1);
 			$filtered_content_stage3 = bbc_alt_singlepage_autocomplete($filtered_content_stage2, $post);
 			$filtered_content_stage4 = bbc_fix_headings($filtered_content_stage3);
 		}

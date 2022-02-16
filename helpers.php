@@ -157,8 +157,8 @@ function bbc_upload_images($content = null, $post = null)
                     {
                         $protocol = stripos($_SERVER['SERVER_PROTOCOL'], 'https') === 0 ? 'https://' : 'http://';
 
-                        // If src doesn`t contains SERVER NAME then add it
-                        if (strpos($src_match[1], 'wp-content') && strpos($src_match[1], $protocol) === false)
+                        // If src is local and doesn`t contains SERVER NAME then add it
+                        if ( strpos($src_match[1], $_SERVER['SERVER_NAME']) && strpos($src_match[1], $protocol) === false )
                         {
                             $src_match[1] = $protocol . $_SERVER['SERVER_NAME'] . $src_match[1] . '';
                         }
@@ -280,8 +280,8 @@ function bbc_set_image_dimension($content)
 
                     $protocol = stripos($_SERVER['SERVER_PROTOCOL'], 'https') === 0 ? 'https://' : 'http://';
 
-                    // If src doesn`t contains SERVER NAME then add it
-                    if (strpos($src_match[1], 'wp-content') && strpos($src_match[1], $protocol) === false)
+                        // If src is local and doesn`t contains SERVER NAME then add it
+                    if ( strpos($src_match[1], $_SERVER['SERVER_NAME']) && strpos($src_match[1], $protocol) === false )
                     {
                         $src_match[1] = $protocol . $_SERVER['SERVER_NAME'] . $src_match[1] . '';
                     }
