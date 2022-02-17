@@ -1,6 +1,6 @@
 <?php
 
-function wdbvf_on_insert_post_handler( $post_id, $post ) {
+function wdbvf_on_insert_post_handler( $post_id, $post, $update ) {
 
     if( get_option('wdbvf_auto_apply_on_publication') === '1' ) {
 
@@ -27,17 +27,17 @@ function wdbvf_on_insert_post_handler( $post_id, $post ) {
                   update_option('wdss_410s_dictionary', $values_arr);
                 }
             
-                remove_action( 'publish_post', 'wdbvf_on_insert_post_handler' );
+                remove_action( 'wp_insert_post', 'wdbvf_on_insert_post_handler' );
                 $args = array(
                   'ID' => $post_id,
                   'post_status' => 'draft',
                   'tags_input' => 'no_content'  
                 );
                 wp_update_post($args);				
-                add_action( 'publish_post', 'wdbvf_on_insert_post_handler', 12, 2 );
+                add_action( 'wp_insert_post', 'wdbvf_on_insert_post_handler', 12, 3 );
         }
         else {
-                remove_action( 'publish_post', 'wdbvf_on_insert_post_handler' );
+                remove_action( 'wp_insert_post', 'wdbvf_on_insert_post_handler' );
                 $args = array(
                   'ID' => $post_id,
                   'post_content' => $filtered_content_stage4,
@@ -48,10 +48,10 @@ function wdbvf_on_insert_post_handler( $post_id, $post ) {
                 if(!has_post_thumbnail($post)) {
                   bbc_attach_first_image($post);
                 }		
-                add_action( 'publish_post', 'wdbvf_on_insert_post_handler', 12, 2 );
+                add_action( 'wp_insert_post', 'wdbvf_on_insert_post_handler', 12, 3 );
         } 
       } 
 }
-add_action( 'publish_post', 'wdbvf_on_insert_post_handler', 10, 2 );
+add_action( 'wp_insert_post ', 'wdbvf_on_insert_post_handler', 10, 3 );
 
 
