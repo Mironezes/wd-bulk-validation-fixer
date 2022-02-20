@@ -6,7 +6,7 @@
  * GitHub Plugin URI: https://github.com/Mironezes/wd-bulk-validation-fixer
  * Primary Branch: realise
  * Description: Fixes all known validaiton issues on WD satellites posts.
- * Version: 0.16.1
+ * Version: 0.16
  * Author: Alexey Suprun
  * Author URI: https://github.com/mironezes
  * Requires at least: 5.5
@@ -27,7 +27,7 @@ require_once(__DIR__ . '/inc/import.php');
 require_once(__DIR__ . '/inc/insert.php');
 
 
-define( 'WDBVF_VERSION', '0.16.1' );   
+define( 'WDBVF_VERSION', '0.16' );   
 define( 'WDBVF_DOMAIN', 'wdbvf' );                   // Text Domain
 define( 'WDBVF_SLUG', 'wd-bulk-validation-fixer' );      // Plugin slug
 define( 'WDBVF_FOLDER', plugin_dir_path( __FILE__ ) );    // Plugin folder
@@ -119,34 +119,35 @@ function wdbvf_show_admin_page() {
 	?>
 	<strong id="wdbvf-note"><?php _e( 'Please note:', WDBVF_DOMAIN ); ?> <?php _e( 'Processing filters on content is irreversible. Its highly recommended to create a backup before start.', WDBVF_DOMAIN ); ?></strong>
 	<div id="wdbvf-settings">
+		<div id="wdbvf-settings-header"> 
+			<h2>Additional Settings</h2>
+		</div>
+		<div id="wdbvf-settings-content">
+			<label id="wdbvf-enable-auto-apply">
+				<?php 
+					$is_checked = '';
+					if(get_option('wdbvf_auto_apply_on_publication') === '1') {
+						$is_checked = 'checked';
+					}
+				?>
 
-		<h2>Additional Settings</h2>
+				<input type="checkbox" name="wdbvf-enable-auto-apply" value="1" <?= $is_checked; ?> >
+				Enable auto content fixes on post insert
+			</label>
 
-		<label id="wdbvf-enable-auto-apply">
-			<?php 
-				$is_checked = '';
-				if(get_option('wdbvf_auto_apply_on_publication') === '1') {
-					$is_checked = 'checked';
-				}
-			?>
+			<label id="wdbvf-validation-only">
+				<input type="checkbox" name="wdbvf-validation-only" checked>
+				Don`t convert images
+			</label>
 
-			<input type="checkbox" name="wdbvf-enable-auto-apply" value="1" <?= $is_checked; ?> >
-			Enable auto content fixes on post insert
-		</label>
-
-		<label id="wdbvf-validation-only">
-			<input type="checkbox" name="wdbvf-validation-only" checked>
-			Don`t convert images
-		</label>
-
-		<label id="wdbvf-remove-non-converted">
-			<input type="checkbox" name="wdbvf-remove-non-converted">
-			Remove not converted images
-		</label>
+			<label id="wdbvf-remove-non-converted">
+				<input type="checkbox" name="wdbvf-remove-non-converted">
+				Remove not converted images
+			</label>
 
 
-		<button id="wdbvf-scan-btn" class="button button-hero" data-nonce="<?php echo wp_create_nonce( 'wdbvf_scan_content' ); ?>"><?php _e( 'Scan Content', WDBVF_DOMAIN ); ?></button>
-		
+			<button id="wdbvf-scan-btn" class="button button-hero" data-nonce="<?php echo wp_create_nonce( 'wdbvf_scan_content' ); ?>"><?php _e( 'Scan Content', WDBVF_DOMAIN ); ?></button>
+		</div>		
 	</div>
 	<div id="wdbvf-output">
 	<?php if ( $indexed_exist ) : ?>
