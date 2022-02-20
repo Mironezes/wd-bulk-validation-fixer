@@ -11,11 +11,37 @@
   display: flex;
   align-items: center;
   margin-bottom: 25px;
+  font-weight: 600;
 }
 #wdbvf-settings label input {
   position: relative;
   top: 2.5px;
 }
+#wdbvf-settings label input[type=checkbox]:checked::before {
+  filter: grayscale(1);
+}
 #wdbvf-wrapper #the-list tr.proceeded a {
   color: #ccc;
+}
+#wdbvf-note {
+  display: block;
+  margin-top: 12px;
+  font-size: 13.5px;
+  font-weight: normal;
+}
+#wdbvf-scan-btn {
+  font-weight: 600;
+  color: #fff;
+  background: #1d2327;
+  border-color: #1d2327;
+}
+#wdbvf-wrapper .button.action {
+  color: #1d2327;
+  border-color: #1d2327;
+}
+#wdbvf-table .wp-list-table a {
+  color: #1d2327;
+}
+.wdbvf-single-convert {
+  border-bottom: 1px dashed;
 }

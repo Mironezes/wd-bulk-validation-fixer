@@ -315,7 +315,7 @@ function bbc_set_image_dimension($content)
             }
             else
             {
-                $buffer = str_replace($tmp, '', $buffer);
+                // $buffer = str_replace($tmp, '', $buffer);
             }
         }
         elseif (!bbc_check_url_status($src_match[1]))
@@ -334,7 +334,6 @@ function bbc_regex_post_content_filters($content)
     $pattern2 = '/<!--(.*?)-->/';
     $pattern3 = '/<div[^>]*>|<\/div>/';
     $pattern4 = '/<noscript>.*<\/noscript><img.*?>/';
-    $pattern5 = '/<figure[^>]*><\/figure[^>]*>/';
     $pattern6 = '/<\w{1,4}>\s?<\/\w{1,4}>/';
     $pattern7 = '/<\/p>\s?<p>/';
     $pattern8 = '/<p>(<iframe[^>]*><\/iframe[^>]*>)<\/p>/';
@@ -350,8 +349,7 @@ function bbc_regex_post_content_filters($content)
     $filtered2 = preg_replace($pattern2, '', $filtered1);
     $filtered3 = preg_replace($pattern3, '', $filtered2);
     $filtered4 = preg_replace($pattern4, '', $filtered3);
-    $filtered5 = preg_replace($pattern5, "", $filtered4);
-    $filtered6 = preg_replace($pattern6, "", $filtered5);
+    $filtered6 = preg_replace($pattern6, "", $filtered4);
     $filtered7 = preg_replace($pattern7, "", $filtered6);
     $filtered8 = preg_replace($pattern8, '$1', $filtered7);
     $filtered9 = preg_replace($pattern9, '', $filtered8);
