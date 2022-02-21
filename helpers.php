@@ -185,12 +185,12 @@ function bbc_upload_images($content = null, $post = null)
                         $buffer = str_replace($tmp, $image, $buffer);
                         update_post_meta($post->ID, 'hasConvertedImages', '1');
                     }
-                    else {
+                    elseif(get_option('removeNotConvertedNonce') === '1') {
                         $buffer = str_replace($tmp, '', $buffer);
                     }
                 }
             }
-            elseif (!bbc_check_url_status($src_match[1]))
+            elseif (!bbc_check_url_status($src_match[1]) && get_option('removeNotConvertedNonce') === '1')
             {
                 $buffer = str_replace($tmp, '', $buffer);
             }

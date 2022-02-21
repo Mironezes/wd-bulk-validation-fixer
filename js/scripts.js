@@ -8,12 +8,24 @@ function WDBVF_Init() {
 	do_action_top_button = document.querySelector('#doaction'),
 	do_action_bottom_button = document.querySelector('#doaction2'),
 
-	validation_only_input = document.querySelector('#wdbvf-validation-only input');
-	auto_apply_input = document.querySelector('#wdbvf-enable-auto-apply input');
-
 	convert_queue = [],
 	doing_ajax = false;
 
+	convert_images_obj = {
+		input: document.querySelector('#wdbvf-convert-images input'),
+		nonce: wdbvfObj.ConvertImagesNonce,
+		action: 'wdbvf_convert_images'
+	};
+	auto_apply_obj = {
+		input: document.querySelector('#wdbvf-enable-auto-apply input'),
+		nonce: wdbvfObj.autoApplyOnPublicationNonce,
+		action: 'wdbvf_auto_apply'
+	};	
+	remove_not_converted_obj = {
+		input: document.querySelector('#wdbvf-remove-not-converted input'),
+		nonce: wdbvfObj.removeNotConvertedNonce,
+		action: 'wdbvf_remove_not_converted'
+	};	
 
 	scan_button.addEventListener('click', function(e) {
 		e.preventDefault();
@@ -22,27 +34,30 @@ function WDBVF_Init() {
 	});
 	
 
-
-	function autoApplyToggler() {
+	function ajaxSaveSettings(obj) {
 		let status;
 
-		if(auto_apply_input.checked) {
-			status = 1;
-		}
-		else {
-			status = 0;
-		}
+		if(obj.input.checked) status = 1;
+		else status = 0;
 
-			jQuery.ajax({
-				method: "POST",
-				url: wdbvfObj.ajaxUrl,
-				data: { action : "wdbvf_auto_apply", status: status, nonce : wdbvfObj.autoApplyOnPublicationNonce }
-			})
-			.done(function() {
-					alert('Saved!');
-			});
+		jQuery.ajax({
+			method: "POST",
+			url: wdbvfObj.ajaxUrl,
+			data: { action : obj.action, status: status, nonce : obj.nonce }
+		})
+		.done(function() {
+			alert('Saved!');
+		});
 	}
-	auto_apply_input.addEventListener('click', autoApplyToggler);
+	auto_apply_obj.input.addEventListener('click', function() {
+		ajaxSaveSettings(auto_apply_obj);
+	});
+	convert_images_obj.input.addEventListener('click', function() {
+		ajaxSaveSettings(convert_images_obj);
+	});
+	remove_not_converted_obj.input.addEventListener('click', function() {
+		ajaxSaveSettings(remove_not_converted_obj);
+	});
 
 
 	// Scanning posts via ajax
@@ -132,16 +147,19 @@ function WDBVF_Init() {
 
 
 	// Single or group saving of converted posts via ajax
-	function saveConverted( content, linkObject, proceededRow ){
+	function saveConverted( content, linkObject, proceededRow ) {
+
+		let is_convert_images = document.querySelector('#wdbvf-convert-images input').checked;
+
 		if ( doing_ajax ) return;
 		doing_ajax = true;
-		let jsonData = linkObject.data('json');
-		jsonData.content = content;
-		jsonData.validation_only = validation_only_input.checked;
+		let json_data = linkObject.data('json');
+		json_data.content = content;
+		json_data.isConvertImages = is_convert_images;
 		jQuery.ajax({
 			method: "POST",
 			url: wdbvfObj.ajaxUrl,
-			data: jsonData,
+			data: json_data,
 		})
 		.done(function( ){
 			doing_ajax = false;
@@ -152,8 +170,8 @@ function WDBVF_Init() {
 			console.log('An error occured');
 		}).
 		always(function(){
-			document.querySelector("#wdbvf-convert-checkbox-"+jsonData.post).setAttribute("checked", false);
-			document.querySelector("#wdbvf-convert-checkbox-"+jsonData.post).setAttribute("disabled", true);
+			document.querySelector("#wdbvf-convert-checkbox-"+json_data.post).setAttribute("checked", false);
+			document.querySelector("#wdbvf-convert-checkbox-"+json_data.post).setAttribute("disabled", true);
 			linkObject.html(wdbvfObj.convertedSingleMessage);			
 			proceededRow.addClass('proceeded');
 			convertPosts();

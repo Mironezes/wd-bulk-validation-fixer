@@ -27,7 +27,7 @@ require_once(__DIR__ . '/inc/import.php');
 require_once(__DIR__ . '/inc/insert.php');
 
 
-define( 'WDBVF_VERSION', '0.16' );   
+define( 'WDBVF_VERSION', '0.16.1' );   
 define( 'WDBVF_DOMAIN', 'wdbvf' );                   // Text Domain
 define( 'WDBVF_SLUG', 'wd-bulk-validation-fixer' );      // Plugin slug
 define( 'WDBVF_FOLDER', plugin_dir_path( __FILE__ ) );    // Plugin folder
@@ -53,6 +53,10 @@ function wdbvf_init_the_plugin() {
 	add_action( 'wp_ajax_wdbvf_single_convert', 'wdbvf_convert_ajax' );
 	// auto apply fixes on post publication
 	add_action( 'wp_ajax_wdbvf_auto_apply', 'wdbvf_auto_apply_ajax' );
+	// dont convert images during filtering
+	add_action( 'wp_ajax_wdbvf_convert_images', 'wdbvf_convert_images_ajax' );
+	// remove not conveted images from post content
+	add_action( 'wp_ajax_wdbvf_remove_not_converted', 'wdbvf_remove_not_converted_ajax' );
 }
 
 /**
@@ -89,6 +93,8 @@ function wdbvf_enqueue_admin_css_js() {
 		'convertedSingleMessage'       => __( 'Completed', WDBVF_DOMAIN ),
 		'failedMessage'                => __( 'Failed', WDBVF_DOMAIN ),
 		'autoApplyOnPublicationNonce' => wp_create_nonce('auto-apply-on-publication-nonce'),
+		'removeNotConvertedNonce' => wp_create_nonce('remove-not-converted-nonce'),
+		'ConvertImagesNonce' => wp_create_nonce('convert-images-nonce')
 	);
 	wp_localize_script( WDBVF_DOMAIN . '-script', 'wdbvfObj', $jsObj );
 	wp_enqueue_script( WDBVF_DOMAIN . '-script' );
@@ -130,18 +136,30 @@ function wdbvf_show_admin_page() {
 						$is_checked = 'checked';
 					}
 				?>
-
-				<input type="checkbox" name="wdbvf-enable-auto-apply" value="1" <?= $is_checked; ?> >
+				<input type="checkbox" name="wdbvf-enable-auto-apply" value="1" <?= $is_checked; ?>>
 				Enable auto content fixes on post insert
 			</label>
 
-			<label id="wdbvf-validation-only">
-				<input type="checkbox" name="wdbvf-validation-only" checked>
-				Don`t convert images
+			<label id="wdbvf-convert-images">
+				<?php 
+					$is_checked = '';
+					if(get_option('wdbvf_convert_images') === '1') {
+						$is_checked = 'checked';
+					}
+				?>
+
+				<input type="checkbox" name="wdbvf-convert-images" value="1" <?= $is_checked; ?>>
+				Convert images
 			</label>
 
-			<label id="wdbvf-remove-non-converted">
-				<input type="checkbox" name="wdbvf-remove-non-converted">
+			<label id="wdbvf-remove-not-converted">
+				<?php 
+					$is_checked = '';
+					if(get_option('wdbvf_remove_not_converted') === '1') {
+						$is_checked = 'checked';
+					}
+				?>
+				<input type="checkbox" name="wdbvf-remove-not-converted" value="1" <?= $is_checked; ?>>
 				Remove not converted images
 			</label>
 
@@ -368,10 +386,10 @@ function wdbvf_convert_ajax() {
 		$post = get_post($post_id);
 		$url = '/'.$post->post_name.'/';
 
-		var_dump($_POST['validation_only']);
+		var_dump($_POST['isConvertImages']);
 
     $filtered_content_stage1 = bbc_regex_post_content_filters($_POST['content']);
-		if($_POST['validation_only'] == 'false') {
+		if($_POST['isConvertImages'] == 'true') {
 			$filtered_content_stage2 = bbc_upload_images($filtered_content_stage1, $post);
 			$filtered_content_stage3 = bbc_alt_singlepage_autocomplete($filtered_content_stage2, $post);
 			$filtered_content_stage4 = bbc_fix_headings($filtered_content_stage3);
@@ -419,17 +437,46 @@ function wdbvf_convert_ajax() {
 function wdbvf_auto_apply_ajax() {
 	check_ajax_referer( 'auto-apply-on-publication-nonce', 'autoApplyOnPublicationNonce', false );
 
-	var_dump($_POST['status']);
-
 	if($_POST['status'] === '1') {
 		update_option('wdbvf_auto_apply_on_publication', '1');
 	}
 	else {
 		update_option('wdbvf_auto_apply_on_publication', '0');
 	}
-
-
 }
+
+
+/**
+ * Disable image webp/jpg convertation.
+ */
+function wdbvf_convert_images_ajax() {
+	check_ajax_referer( 'convert-images-nonce', 'ConvertImagesNonce', false );
+
+	if($_POST['status'] === '1') {
+		update_option('wdbvf_convert_images', '1');
+	}
+	else {
+		update_option('wdbvf_convert_images', '0');
+	}
+}
+
+
+
+/**
+ * Remove not converted images from post content.
+ */
+function wdbvf_remove_not_converted_ajax() {
+	check_ajax_referer( 'remove-not-converted-nonce', 'removeNotConvertedNonce', false );
+
+	if($_POST['status'] === '1') {
+		update_option('wdbvf_remove_not_converted', '1');
+	}
+	else {
+		update_option('wdbvf_remove_not_converted', '0');
+	}
+}
+
+
 
 /**
  * Cleaning up on plugin deactivation.
