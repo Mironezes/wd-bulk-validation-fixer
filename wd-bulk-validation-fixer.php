@@ -27,7 +27,7 @@ require_once(__DIR__ . '/inc/import.php');
 require_once(__DIR__ . '/inc/insert.php');
 
 
-define( 'WDBVF_VERSION', '0.16.1' );   
+define( 'WDBVF_VERSION', '0.16' );   
 define( 'WDBVF_DOMAIN', 'wdbvf' );                   // Text Domain
 define( 'WDBVF_SLUG', 'wd-bulk-validation-fixer' );      // Plugin slug
 define( 'WDBVF_FOLDER', plugin_dir_path( __FILE__ ) );    // Plugin folder
