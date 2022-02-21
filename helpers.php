@@ -9,8 +9,7 @@ function bbc_fix_headings($content) {
 
 	preg_match_all($pattern, $content, $results);
 	if(!empty($results)) {
-
-		if(mb_strpos($results[0][0], 'h2') == false) {
+		if(!empty($results[0][0]) && mb_strpos($results[0][0], 'h2') == false) {
 			$h2 = preg_replace($pattern, '<h2>$1</h2>', $results[0][0]);
 			
 			$old_tag = preg_replace('/\//', '\/', $results[0][0]);
@@ -24,19 +23,27 @@ function bbc_fix_headings($content) {
 
 // Set an excerpt to post
 function bbc_set_excerpt($content) {
-    $condition = '/<p.*?>.*?<\/p>/';
+    $excerpt = '';
 
-    preg_match_all($condition, $content, $results);
+    if (preg_match('/<div[^>]*id="toc"[^>]*>.*?<\/div>/', $content))
+    {
+        $filtered_content = strip_tags(preg_replace('#<div[^>]*id="toc"[^>]*>.*?</div>#is', '', $content));
+    }
 
-	foreach($results as $result) {
-		$i = 1;
-		if(strpos($result[$i], 'toctitle') == false && strpos($result[$i], 'img') === false) {
-            $stripped = strip_tags($result[$i]);
-            $excerpt = mb_substr($stripped, 0, 250, 'UTF-8') . ' [...]';
-            return $excerpt;
-		}
-		$i++;
-	}
+    
+    elseif (preg_match('/<p>(.*?)<\/p>/', $content))
+    {
+        $excerpt_raw = preg_match_all('/<p>(.*?)<\/p>/', $content, $results);
+        if (!empty($results[0][0]))
+        {
+            $filtered_content = strip_tags($results[0][0]);
+        }
+    }
+
+    if(!empty($filtered_content)) {
+        $excerpt = mb_substr(strip_tags($filtered_content), 0, 250) . '...';
+    }
+    return $excerpt;
 }
 
 
@@ -148,13 +155,12 @@ function bbc_upload_images($content = null, $post = null)
                     // Regular src case
                     else
                     {
-                        $protocol = $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
-                        $port = $_SERVER['SERVER_PORT'] ? ':' . $_SERVER['SERVER_PORT']   : '';
+                        $protocol = stripos($_SERVER['SERVER_PROTOCOL'], 'https') === 0 ? 'https://' : 'http://';
 
-                        // If src doesn`t contains SERVER NAME then add it
-                        if (strpos($src_match[1], 'wp-content') !== false && strpos($src_match[1], $protocol) === false)
+                        // If src is local and doesn`t contains SERVER NAME then add it
+                        if ( strpos($src_match[1], $_SERVER['SERVER_NAME']) && strpos($src_match[1], $protocol) === false )
                         {
-                            $src_match[1] = $protocol . $_SERVER['SERVER_NAME'] . $port . $src_match[1];
+                            $src_match[1] = $protocol . $_SERVER['SERVER_NAME'] . $src_match[1] . '';
                         }
                         // If image src returns 200 status then get image size
                         if (bbc_check_url_status($src_match[1]))
@@ -169,33 +175,152 @@ function bbc_upload_images($content = null, $post = null)
                     $attach_webp_id = array_key_last($attachments);
                     $attach_jpg_id = $attach_webp_id - 1;
 
-                    $filesize = filesize( get_attached_file( $attach_webp_id ) ) ?: 0;
-
                     $src_jpg = wp_get_attachment_url($attach_jpg_id);
                     $src_webp = wp_get_attachment_url($attach_webp_id);
                     $width = $image_data[0];
                     $height = $image_data[1];
 
-                    if($filesize && $src_jpg && $src_webp && $width && $height) {
+                    if($src_jpg && $src_webp && $width && $height) {
                         $image = "<picture><source srcset='${src_webp}' type='image/webp'><img loading='lazy' src='${src_jpg}' width='${width}' height='${height}'></picture>";
                         $buffer = str_replace($tmp, $image, $buffer);
                         update_post_meta($post->ID, 'hasConvertedImages', '1');
                     }
-                    else {
+                    elseif(get_option('removeNotConvertedNonce') === '1') {
                         $buffer = str_replace($tmp, '', $buffer);
                     }
                 }
             }
-            elseif (!bbc_check_url_status($src_match[1]))
+            elseif (!bbc_check_url_status($src_match[1]) && get_option('removeNotConvertedNonce') === '1')
             {
                 $buffer = str_replace($tmp, '', $buffer);
             }
         }
-    
-        // Inserts </p>{}<p> template around picture for better view
-        $pattern = '/(?<=\.|\n)(<picture>.*?<\/picture>)(?=\w|\s+|\n+)/';
-        if(preg_match($pattern, $buffer)) {
-            $buffer = preg_replace($pattern, "</p>$1<p>", $buffer);
+    }
+
+    // Inserts </p>{}<p> template around picture for better view
+    $pattern = '/(?<![<div>|<p>])(<picture>.*?<\/picture>)(?!<\/[div|p]>)/';
+    if(preg_match($pattern, $buffer)) {
+        $buffer = preg_replace($pattern, "</p>$1<p>", $buffer);
+    }
+    return $buffer;
+}
+
+
+// Auto width/height attributes
+function bbc_set_image_dimension($content)
+{
+
+    $buffer = stripslashes($content);
+
+    // Get all images
+    $pattern1 = '/<img(?:[^>])*+>/i';
+    preg_match_all($pattern1, $buffer, $first_match);
+
+    $all_images = array_merge($first_match[0]);
+
+    foreach ($all_images as $image)
+    {
+
+        $tmp = $image;
+        // Removing existing width/height attributes
+        $clean_image = preg_replace('/\swidth="(\d*(px%)?)"(\sheight="(\w+)")?/', '', $tmp);
+        $clean_image = preg_replace('/loading="lazy"/', '', $clean_image);
+
+        if ($clean_image)
+        {
+
+            // Blob-case variables
+            $is_blob = false;
+            $clean_blob_image;
+
+            // Get link of the file
+            preg_match('/src=[\'"]([^\'"]+)/', $clean_image, $src_match);
+
+            if (!empty($src_match))
+            {
+                // Compares src with banned hosts
+                $in_block_list = false;
+                $exceptions = get_option('wdss_excluded_hosts_dictionary', '');
+                // chemistryland.com, fin.gc.ca, support.revelsystems.com
+                if (!empty($exceptions) && is_array($exceptions))
+                {
+                    foreach ($exceptions as $exception)
+                    {
+                        if (strpos($src_match[1], $exception) !== false)
+                        {
+                            $in_block_list = true;
+                        }
+                    }
+                }
+
+                // If image is BLOB encoded
+                if (strpos($src_match[1], 'base64') !== false)
+                {
+                    $is_blob = true;
+                    $image_url = bbc_base64_fixer($src_match[1]);
+                    $clean_blob_image = '<img src="' . $image_url . '">';
+                    $binary = base64_decode(explode(',', $image_url) [1]);
+                    $image_data = getimagesizefromstring($binary) ? getimagesizefromstring($binary) : false;
+
+                    if ($image_data)
+                    {
+                        $width = $image_data[0];
+                        $height = $image_data[1];
+                    }
+                }
+                // Regular src case
+                else
+                {
+                    // If image`s host in block list then remove it
+                    if ($in_block_list)
+                    {
+                        $buffer = str_replace($tmp, '', $buffer);
+                        return $buffer;
+                    }
+
+                    $protocol = stripos($_SERVER['SERVER_PROTOCOL'], 'https') === 0 ? 'https://' : 'http://';
+
+                        // If src is local and doesn`t contains SERVER NAME then add it
+                    if ( strpos($src_match[1], $_SERVER['SERVER_NAME']) && strpos($src_match[1], $protocol) === false )
+                    {
+                        $src_match[1] = $protocol . $_SERVER['SERVER_NAME'] . $src_match[1] . '';
+                    }
+                    // If image src returns 200 status then get image size
+                    if (bbc_check_url_status($src_match[1]))
+                    {
+                        list($width, $height) = getimagesize($src_match[1]);
+                    }
+                }
+
+            }
+
+            // Checks if width & height are defined
+            if (!empty($width) && !empty($height))
+            {
+                $dimension = 'width="' . $width . '" height="' . $height . '" ';
+
+                // Add width and width attribute
+                if ($is_blob)
+                {
+                    $image = str_replace('<img', '<img loading="lazy" ' . $dimension, $clean_blob_image);
+                }
+                else
+                {
+                    $image = str_replace('<img', '<img loading="lazy" ' . $dimension, $clean_image);
+                }
+
+                // Replace image with new attributes
+                $buffer = str_replace($tmp, $image, $buffer);
+
+            }
+            else
+            {
+                // $buffer = str_replace($tmp, '', $buffer);
+            }
+        }
+        elseif (!bbc_check_url_status($src_match[1]))
+        {
+            $buffer = str_replace($tmp, '', $buffer);
         }
     }
     return $buffer;
@@ -209,10 +334,12 @@ function bbc_regex_post_content_filters($content)
     $pattern2 = '/<!--(.*?)-->/';
     $pattern3 = '/<div[^>]*>|<\/div>/';
     $pattern4 = '/<noscript>.*<\/noscript><img.*?>/';
-    $pattern5 = '/<figure[^>]*><\/figure[^>]*>/';
     $pattern6 = '/<\w{1,4}>\s?<\/\w{1,4}>/';
     $pattern7 = '/<\/p>\s?<p>/';
     $pattern8 = '/<p>(<iframe[^>]*><\/iframe[^>]*>)<\/p>/';
+    $pattern9 = '/[^ -\x{2122}]\s+|\s*[^ -\x{2122}]/u';
+
+    
     $pattern10 = '/<\/p>\s?<\/p>/';
     $pattern11 = '/(<\/h2>)<\/p>/';
 	$pattern12 = '/(<\/?strong>)/';
@@ -222,18 +349,17 @@ function bbc_regex_post_content_filters($content)
     $filtered2 = preg_replace($pattern2, '', $filtered1);
     $filtered3 = preg_replace($pattern3, '', $filtered2);
     $filtered4 = preg_replace($pattern4, '', $filtered3);
-    $filtered5 = preg_replace($pattern5, "", $filtered4);
-    $filtered6 = preg_replace($pattern6, "", $filtered5);
+    $filtered6 = preg_replace($pattern6, "", $filtered4);
     $filtered7 = preg_replace($pattern7, "", $filtered6);
-    $filtered8 = preg_replace($pattern8, '$1', $filtered7); 
-    $filtered10 = preg_replace($pattern10, '', $filtered8);
+    $filtered8 = preg_replace($pattern8, '$1', $filtered7);
+    $filtered9 = preg_replace($pattern9, '', $filtered8);
+
+    $filtered10 = preg_replace($pattern10, '', $filtered9);
     $filtered11 = preg_replace($pattern11, '$1', $filtered10);
     $filtered12 = preg_replace($pattern12, '', $filtered11);
     $filtered13 = preg_replace($pattern13, '<h2>$1</h2>', $filtered12);
 
-    $filtered14 = filter_var($filtered13, FILTER_UNSAFE_RAW, FILTER_FLAG_STRIP_HIGH);
-
-    return $filtered14;
+    return $filtered13;
 }
 
 // Adds alts for post content images

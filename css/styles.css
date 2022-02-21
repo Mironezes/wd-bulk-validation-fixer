@@ -1,19 +1,67 @@
 #wdbvf-wrapper h1 {
   font-weight: 600;
 }
-#wdbvf-validation-only {
-  display: flex;
-  align-items: center;
-  margin-top: 35px;
+#wdbvf-wrapper h1 small {
+  font-size: 1rem;
+}
+#wdbvf-settings {
   margin-bottom: 35px;
 }
-#wdbvf-validation-only input {
-  margin-left: 5px;
+#wdbvf-settings-header {
+  padding: 25px;
+  background-color: #1d2327;
 }
-#wdbvf-validation-only label {
-  font-weight: 500;
-  margin-right: 25px;
+#wdbvf-settings-header h2 {
+  margin: 0;
+  color: #fff;
+}
+#wdbvf-settings-content {
+  padding: 25px;
+  background-color: #fff;
+}
+#wdbvf-settings label {
+  display: flex;
+  align-items: center;
+  margin-bottom: 25px;
+  font-weight: 600;
+}
+#wdbvf-settings label input {
+  position: relative;
+  top: 2.5px;
+}
+#wdbvf-wrapper input[type=checkbox]:checked::before {
+  filter: grayscale(1);
+}
+#wdbvf-wrapper input[type=checkbox]:focus {
+  border-color: inherit;
+  outline: inherit;
+  box-shadow: none;
 }
 #wdbvf-wrapper #the-list tr.proceeded a {
   color: #ccc;
+}
+#wdbvf-note {
+  display: block;
+  margin-top: 12px;
+  margin-bottom: 20px;
+  font-size: 13.5px;
+  font-weight: normal;
+}
+#wdbvf-scan-btn {
+  font-weight: 600;
+  color: #fff;
+  background: #1d2327;
+  border-color: #1d2327;
+}
+#wdbvf-wrapper .button.action,
+#wdbvf-wrapper #search-submit {
+  color: #1d2327;
+  border-color: #1d2327;
+}
+#wdbvf-wrapper .subsubsub a,
+#wdbvf-table .wp-list-table a {
+  color: #1d2327;
+}
+.wdbvf-single-convert {
+  border-bottom: 1px dashed;
 }

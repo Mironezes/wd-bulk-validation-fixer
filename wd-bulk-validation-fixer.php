@@ -6,7 +6,7 @@
  * GitHub Plugin URI: https://github.com/Mironezes/wd-bulk-validation-fixer
  * Primary Branch: realise
  * Description: Fixes all known validaiton issues on WD satellites posts.
- * Version: 0.15.6
+ * Version: 0.16
  * Author: Alexey Suprun
  * Author URI: https://github.com/mironezes
  * Requires at least: 5.5
@@ -24,8 +24,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 require_once('helpers.php');
 require_once(__DIR__ . '/inc/import.php');
+require_once(__DIR__ . '/inc/insert.php');
 
-define( 'WDBVF_VERSION', '0.15.6' );   
+
+define( 'WDBVF_VERSION', '0.16' );   
 define( 'WDBVF_DOMAIN', 'wdbvf' );                   // Text Domain
 define( 'WDBVF_SLUG', 'wd-bulk-validation-fixer' );      // Plugin slug
 define( 'WDBVF_FOLDER', plugin_dir_path( __FILE__ ) );    // Plugin folder
@@ -41,9 +43,6 @@ define( 'WDBVF_STATUSES', serialize( array( 'publish', 'future' ) ) );
  */
 add_action( 'plugins_loaded', 'wdbvf_init_the_plugin' );
 function wdbvf_init_the_plugin() {
-	if ( ! wdbvf_is_gutenberg_active() ) {
-		return;
-	}
 	// dispatching POST to GET parameters
 	add_action( 'init', 'wdbvf_dispatch_url' );
 	// adding subitem to the Tools menu item
@@ -51,66 +50,13 @@ function wdbvf_init_the_plugin() {
 	// scan posts via ajax
 	add_action( 'wp_ajax_wdbvf_scan_posts', 'wdbvf_scan_posts_ajax' );
 	// single post convert via ajax
-	add_action( 'wp_ajax_wdbvf_single_convert', 'wdbvf_single_convert_ajax' );
-}
-
-
-
-
-/**
- * Check if Block Editor is active.
- * Must only be used after plugins_loaded action is fired.
- *
- * @return bool
- */
-function wdbvf_is_gutenberg_active() {
-	// Gutenberg plugin is installed and activated.
-	// $gutenberg = ! ( false === has_filter( 'replace_editor', 'gutenberg_init' ) );
-
-	// Block editor since 5.0.
-	$block_editor = version_compare( $GLOBALS['wp_version'], '5.0-beta', '>' );
-
-	// if ( ! $gutenberg && ! $block_editor ) {
-	if ( ! $block_editor ) {
-		return false;
-	}
-
-	$gutenberg_plugin = function_exists( 'gutenberg_register_packages_scripts' );
-
-	// Remove Gutenberg plugin scripts reassigning.
-	if ( $gutenberg_plugin ) {
-		add_action( 'wp_default_scripts', 'wdbvf_remove_gutenberg_overrides', 5 );
-	}
-
-	return true;
-}
-
-/**
- * Check if Classic Editor plugin is active.
- *
- * @return bool
- */
-function wdbvf_is_classic_editor_plugin_active() {
-	if ( ! function_exists( 'is_plugin_active' ) ) {
-		include_once ABSPATH . 'wp-admin/includes/plugin.php';
-	}
-
-	if ( is_plugin_active( 'classic-editor/classic-editor.php' ) ) {
-		return true;
-	}
-
-	return false;
-}
-
-/**
- * Remove Gutenberg plugin scripts reassigning.
- */
-function wdbvf_remove_gutenberg_overrides() {
-	$pagematch = strpos( $_SERVER['REQUEST_URI'], '/wp-admin/tools.php?page=' . WDBVF_SLUG );
-	if ( $pagematch !== false ) {
-		remove_action( 'wp_default_scripts', 'gutenberg_register_vendor_scripts' );
-		remove_action( 'wp_default_scripts', 'gutenberg_register_packages_scripts' );
-	}
+	add_action( 'wp_ajax_wdbvf_single_convert', 'wdbvf_convert_ajax' );
+	// auto apply fixes on post publication
+	add_action( 'wp_ajax_wdbvf_auto_apply', 'wdbvf_auto_apply_ajax' );
+	// dont convert images during filtering
+	add_action( 'wp_ajax_wdbvf_convert_images', 'wdbvf_convert_images_ajax' );
+	// remove not conveted images from post content
+	add_action( 'wp_ajax_wdbvf_remove_not_converted', 'wdbvf_remove_not_converted_ajax' );
 }
 
 /**
@@ -146,7 +92,9 @@ function wdbvf_enqueue_admin_css_js() {
 		'convertingSingleMessage'      => __( 'Processing...', WDBVF_DOMAIN ),
 		'convertedSingleMessage'       => __( 'Completed', WDBVF_DOMAIN ),
 		'failedMessage'                => __( 'Failed', WDBVF_DOMAIN ),
-		'resetPostsValidationNonce' => wp_create_nonce('reset-posts-validation-status-nonce'),
+		'autoApplyOnPublicationNonce' => wp_create_nonce('auto-apply-on-publication-nonce'),
+		'removeNotConvertedNonce' => wp_create_nonce('remove-not-converted-nonce'),
+		'ConvertImagesNonce' => wp_create_nonce('convert-images-nonce')
 	);
 	wp_localize_script( WDBVF_DOMAIN . '-script', 'wdbvfObj', $jsObj );
 	wp_enqueue_script( WDBVF_DOMAIN . '-script' );
@@ -156,6 +104,7 @@ function wdbvf_enqueue_admin_css_js() {
 /**
  * Rendering admin page of the plugin.
  */
+
 function wdbvf_show_admin_page() {
 	$indexed_arr   = wdbvf_count_indexed();
 	$indexed_exist = wdbvf_exist_indexed( $indexed_arr );
@@ -174,10 +123,50 @@ function wdbvf_show_admin_page() {
 		}
 	}
 	?>
-	<p><span style="color:red;"><?php _e( 'Please note:', WDBVF_DOMAIN ); ?></span> <?php _e( 'Processing filters on content is irreversible. Its highly recommended to create a backup before start.', WDBVF_DOMAIN ); ?></p>
-	<p>
-		<button id="wdbvf-scan-btn" class="button button-hero" data-nonce="<?php echo wp_create_nonce( 'wdbvf_scan_content' ); ?>"><?php _e( 'Scan Content', WDBVF_DOMAIN ); ?></button>
-	</p>
+	<strong id="wdbvf-note"><?php _e( 'Please note:', WDBVF_DOMAIN ); ?> <?php _e( 'Processing filters on content is irreversible. Its highly recommended to create a backup before start.', WDBVF_DOMAIN ); ?></strong>
+	<div id="wdbvf-settings">
+		<div id="wdbvf-settings-header"> 
+			<h2>Additional Settings</h2>
+		</div>
+		<div id="wdbvf-settings-content">
+			<label id="wdbvf-enable-auto-apply">
+				<?php 
+					$is_checked = '';
+					if(get_option('wdbvf_auto_apply_on_publication') === '1') {
+						$is_checked = 'checked';
+					}
+				?>
+				<input type="checkbox" name="wdbvf-enable-auto-apply" value="1" <?= $is_checked; ?>>
+				Enable auto content fixes on post insert
+			</label>
+
+			<label id="wdbvf-convert-images">
+				<?php 
+					$is_checked = '';
+					if(get_option('wdbvf_convert_images') === '1') {
+						$is_checked = 'checked';
+					}
+				?>
+
+				<input type="checkbox" name="wdbvf-convert-images" value="1" <?= $is_checked; ?>>
+				Convert images
+			</label>
+
+			<label id="wdbvf-remove-not-converted">
+				<?php 
+					$is_checked = '';
+					if(get_option('wdbvf_remove_not_converted') === '1') {
+						$is_checked = 'checked';
+					}
+				?>
+				<input type="checkbox" name="wdbvf-remove-not-converted" value="1" <?= $is_checked; ?>>
+				Remove not converted images
+			</label>
+
+
+			<button id="wdbvf-scan-btn" class="button button-hero" data-nonce="<?php echo wp_create_nonce( 'wdbvf_scan_content' ); ?>"><?php _e( 'Scan Content', WDBVF_DOMAIN ); ?></button>
+		</div>		
+	</div>
 	<div id="wdbvf-output">
 	<?php if ( $indexed_exist ) : ?>
 		<div id="wdbvf-results"><?php wdbvf_render_results( $indexed_arr ); ?></div>
@@ -361,7 +350,7 @@ function wdbvf_status_label( $status ) {
 /**
  * Single post converting via ajax.
  */
-function wdbvf_single_convert_ajax() {
+function wdbvf_convert_ajax() {
 	require_once('helpers.php');
 
 	header( 'Content-Type: application/json; charset=UTF-8' );
@@ -397,10 +386,19 @@ function wdbvf_single_convert_ajax() {
 		$post = get_post($post_id);
 		$url = '/'.$post->post_name.'/';
 
+		var_dump($_POST['isConvertImages']);
+
     $filtered_content_stage1 = bbc_regex_post_content_filters($_POST['content']);
-    $filtered_content_stage2 = bbc_upload_images($filtered_content_stage1, $post);
-    $filtered_content_stage3 = bbc_alt_singlepage_autocomplete($filtered_content_stage2, $post);
-    $filtered_content_stage4 = bbc_fix_headings($filtered_content_stage3);
+		if($_POST['isConvertImages'] == 'true') {
+			$filtered_content_stage2 = bbc_upload_images($filtered_content_stage1, $post);
+			$filtered_content_stage3 = bbc_alt_singlepage_autocomplete($filtered_content_stage2, $post);
+			$filtered_content_stage4 = bbc_fix_headings($filtered_content_stage3);
+		}
+		else {
+			$filtered_content_stage2 = bbc_set_image_dimension($filtered_content_stage1);
+			$filtered_content_stage3 = bbc_alt_singlepage_autocomplete($filtered_content_stage2, $post);
+			$filtered_content_stage4 = bbc_fix_headings($filtered_content_stage3);
+		}
 
 		$excerpt = bbc_set_excerpt($filtered_content_stage4);
 
@@ -432,13 +430,59 @@ function wdbvf_single_convert_ajax() {
 	}
 }
 
+
+/**
+ * Auto apply fixes on post publication.
+ */
+function wdbvf_auto_apply_ajax() {
+	check_ajax_referer( 'auto-apply-on-publication-nonce', 'autoApplyOnPublicationNonce', false );
+
+	if($_POST['status'] === '1') {
+		update_option('wdbvf_auto_apply_on_publication', '1');
+	}
+	else {
+		update_option('wdbvf_auto_apply_on_publication', '0');
+	}
+}
+
+
+/**
+ * Disable image webp/jpg convertation.
+ */
+function wdbvf_convert_images_ajax() {
+	check_ajax_referer( 'convert-images-nonce', 'ConvertImagesNonce', false );
+
+	if($_POST['status'] === '1') {
+		update_option('wdbvf_convert_images', '1');
+	}
+	else {
+		update_option('wdbvf_convert_images', '0');
+	}
+}
+
+
+
+/**
+ * Remove not converted images from post content.
+ */
+function wdbvf_remove_not_converted_ajax() {
+	check_ajax_referer( 'remove-not-converted-nonce', 'removeNotConvertedNonce', false );
+
+	if($_POST['status'] === '1') {
+		update_option('wdbvf_remove_not_converted', '1');
+	}
+	else {
+		update_option('wdbvf_remove_not_converted', '0');
+	}
+}
+
+
+
 /**
  * Cleaning up on plugin deactivation.
  */
 function wdbvf_deactivate() {
-	global $wpdb;
-	$query = "DELETE FROM {$wpdb->postmeta} WHERE meta_key='" . WDBVF_META_KEY . "'";
-	$wpdb->query( $query );
+	// Empty...
 }
 register_deactivation_hook( __FILE__, 'wdbvf_deactivate' );
 
